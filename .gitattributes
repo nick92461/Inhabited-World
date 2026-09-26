@@ -1,0 +1,2 @@
+# Canon files are hash-verified; never convert their line endings.
+docs/canon/** -text

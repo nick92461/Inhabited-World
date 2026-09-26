@@ -1,0 +1,38 @@
+{
+	"schemaVersion": 1,
+	"id": "inhabited",
+	"version": "${version}",
+	"name": "Inhabited",
+	"description": "This is an example description! Tell everyone what your mod is about!",
+	"authors": [
+		"Me!"
+	],
+	"contact": {
+		"homepage": "https://fabricmc.net/",
+		"sources": "https://github.com/FabricMC/fabric-example-mod"
+	},
+	"license": "All-Rights-Reserved",
+	"icon": "assets/inhabited/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"io.github.nick92461.inhabited.Inhabited"
+		],
+		"client": [
+			"io.github.nick92461.inhabited.client.InhabitedClient"
+		]
+	},
+	"mixins": [
+		"inhabited.mixins.json",
+		{
+			"config": "inhabited.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}
