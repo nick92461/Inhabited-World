@@ -117,6 +117,8 @@ Mojang Codecs are preferred where they cleanly serve as common representations f
 
 If Codecs provide sufficient validation and useful errors, do not introduce a second JSON-schema stack without need.
 
+A backend-specific schema generated from a request's output constraints for constrained decoding (`04` §23) is transport, not a second validation stack. Codecs and deterministic validators remain the validation authority.
+
 ---
 
 # 51. Player Identity
@@ -128,6 +130,8 @@ Display names are not authoritative identity.
 Development tooling must account for dev launches potentially generating changing identities.
 
 When Phase 4 introduces player persistence, pin a stable development identity so reload testing is meaningful.
+
+In practice, pin it as soon as world testing begins (it was pinned in Phase 2A). A changing dev identity already makes every reload of a test world spawn a new player.
 
 Multiplayer reinforces the importance of UUID identity because multiple players may independently possess:
 
@@ -153,6 +157,8 @@ Initial platform:
 - optional BYOK later
 - long-term dedicated multiplayer support
 - long-term server-controlled inference
+- Windows-first managed local-AI runtime provisioning for the consumer local edition
+- project-curated local model packages selected by hardware capability
 
 The exact Minecraft/Fabric/JDK/model/runtime baseline should be chosen using current documentation at implementation time.
 
@@ -194,7 +200,12 @@ context
 validation
 telemetry
 configuration
+runtime management
+hardware detection
+package provisioning
 ```
+
+The native/local runtime-management layer should remain infrastructure rather than becoming a home for game/domain logic. It may detect hardware, provision approved files, manage the inference child process, and report health, while authoritative context construction and validation remain in the normal game-side AI architecture.
 
 Long-term multiplayer may additionally require:
 

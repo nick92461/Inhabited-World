@@ -88,6 +88,13 @@ Events use meaningful total elapsed world time rather than time-of-day.
 
 Sleeping or `/time set` must not corrupt historical ordering.
 
+Each event therefore records two monotonic times:
+
+- an **ordering time**: total elapsed game ticks, which never jumps or reverses and decides historical order
+- an **in-world calendar day**: days as the world experiences them, including nights skipped by sleeping, never moving backwards even if time is set backwards
+
+The ordering time alone cannot express "three days ago", because it does not advance while the world skips time. The calendar day alone cannot order events within a day. NPC schedules follow the world's day clock, and statements like "three days ago" use the calendar day.
+
 The authoritative server writes history.
 
 ---

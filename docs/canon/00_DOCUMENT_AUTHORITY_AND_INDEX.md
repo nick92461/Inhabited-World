@@ -2,13 +2,15 @@
 
 ## Status
 
-This file defines the authority, hierarchy, synchronization protocol, and canonical file layout for the Minecraft: Inhabited project.
+This file defines the authority, hierarchy, change-control protocol, and canonical file layout for the Minecraft: Inhabited project.
 
 The **user is the ultimate project authority**.
 
-For purposes of producing the actual canonical document corpus, **ChatGPT is the canonical-document generator designated by the user**. Claude may analyze, challenge, implement, and propose changes, but Claude does not independently redefine canon.
+**Claude maintains the canonical document corpus and the implementation plans on the user's behalf.** Claude may analyze, challenge, implement, and propose changes, but canon changes only when the user explicitly approves them. Claude does not independently redefine canon.
 
-The purpose of this arrangement is to ensure that the user, ChatGPT, and Claude always converge on one exact shared source of truth rather than allowing parallel design documents to drift.
+The purpose of this arrangement is to ensure that the user and Claude always converge on one exact shared source of truth rather than allowing parallel design documents to drift.
+
+History: from 2026-09-25 to 2026-09-28, ChatGPT was the user-designated generator of the canonical corpus, and Claude synchronized ChatGPT-generated packages onto disk. On 2026-09-28 the user retired that arrangement and assigned canon maintenance to Claude under the approval rule above.
 
 The canonical corpus is stored at the **workspace level**, not inside the mod codebase. All relative paths in this document are rooted at the `Minecraft Inhabited/` workspace directory. The eventual mod codebase is a child of that workspace and remains subordinate to the workspace-level canon.
 
@@ -53,7 +55,7 @@ Use the following authority order:
 docs/canon/00_DOCUMENT_AUTHORITY_AND_INDEX.md
 ```
 
-Defines document authority, conflict resolution, synchronization, and the canonical file map.
+Defines document authority, conflict resolution, change control, and the canonical file map.
 
 ## Tier 1 — Project Constitution
 
@@ -130,7 +132,7 @@ Code is an implementation of canon. Existing code does not automatically redefin
 
 When documents appear to conflict:
 
-1. This authority/index file governs document authority and synchronization only.
+1. This authority/index file governs document authority and change control only.
 2. `01_PROJECT_CHARTER.md` outranks every subsystem, milestone, plan, note, and implementation decision on project-wide principles.
 3. A specifically scoped Tier 2 subsystem specification governs details within its domain so long as it does not contradict the Project Charter.
 4. `09_V0_1_VERTICAL_SLICE.md` governs what Version 0.1 must and must not implement, but it cannot override higher-level architectural rules.
@@ -146,28 +148,24 @@ A more specific document may clarify a broader rule. It may not contradict it.
 
 The user is the final authority on project direction.
 
-ChatGPT is designated to generate the canonical file changes used to update the on-disk corpus.
+Claude maintains the canonical files and applies canon changes, but only changes the user has explicitly approved.
 
 The expected workflow is:
 
 ```text
-User + ChatGPT + Claude discuss/design
+User + Claude discuss/design
         ↓
-User decides canon should change
+Claude writes proposals (Section 5)
         ↓
-User asks ChatGPT for the canon deliverable
+User considers all proposals and ideas
         ↓
-ChatGPT integrates the decision losslessly
+User approves, rejects, or amends each proposal
         ↓
-ChatGPT updates its retained project understanding
+Claude applies exactly the approved changes losslessly (Section 7)
         ↓
-ChatGPT produces updated canonical files and/or exact file instructions
+Claude records the change in the implementation plan's canon change log
         ↓
-ChatGPT produces a Claude synchronization prompt
-        ↓
-User gives package + prompt to Claude
-        ↓
-Claude synchronizes on-disk canon exactly
+User commits the canon change
 ```
 
 Claude is encouraged to identify:
@@ -178,15 +176,17 @@ Claude is encouraged to identify:
 - architectural improvements
 - unclear requirements
 
-However, those observations are proposals until the user routes them through the canonical update process.
+However, those observations are proposals until the user approves them.
 
-Claude should not silently edit canonical design meaning based on its own preference.
+Claude must not silently edit canonical design meaning based on its own preference, and must not make opportunistic canon edits (including "obvious" wording cleanups) outside an approved change.
 
 ---
 
-# 5. Claude-to-ChatGPT Proposal Flow
+# 5. Canon Proposal Flow
 
-When Claude discovers a design issue or proposes a change that may belong in canon, Claude should provide the user with a clearly labeled **Canon Update Proposal for ChatGPT**.
+When Claude discovers a design issue or proposes a change that may belong in canon, Claude should provide the user with a clearly labeled **Canon Proposal**.
+
+Related proposals should be batched so the user can consider them together.
 
 That proposal should state:
 
@@ -198,13 +198,9 @@ That proposal should state:
 - implementation consequences
 - any unresolved alternatives
 
-The user then brings that proposal to ChatGPT.
+The user decides whether and how it enters canon.
 
-ChatGPT and the user decide whether and how it enters canon.
-
-If approved, ChatGPT generates the authoritative update and a synchronization prompt for Claude.
-
-Claude then updates its on-disk canonical corpus to match the ChatGPT-generated version.
+If approved, Claude applies the approved change under Section 7.
 
 ---
 
@@ -242,21 +238,21 @@ When performing a large reorganization, use a migration manifest so every prior 
 
 ---
 
-# 7. Canon Synchronization Rule
+# 7. Applying Approved Canon Changes
 
-Claude's on-disk `docs/canon/` directory should match the latest canonical package generated through this workflow.
+When the user approves a canon change, Claude should:
 
-When the user supplies Claude with an updated canonical package from ChatGPT, Claude should:
+1. Re-read the affected canonical files from disk before editing.
+2. Apply exactly the approved change, and nothing else.
+3. Preserve all other wording under the Lossless Canon Rule (Section 6).
+4. Keep retained section numbering stable; new sections receive new, unused numbers.
+5. Create or remove canonical files only when the approved change says so.
+6. Record the change in the implementation plan's canon change log (what changed, where, and when it was approved).
+7. Re-read the changed files and any files relevant to the current implementation milestone before continuing implementation work.
 
-1. Read the synchronization prompt completely.
-2. Create any new required directories.
-3. Replace or create the specified canonical files exactly as supplied.
-4. Do not paraphrase, optimize, condense, or independently reconcile the supplied canonical text.
-5. Preserve unrelated project files.
-6. Remove superseded canonical files only when the synchronization prompt explicitly says to do so.
-7. Re-read the canonical index and any files relevant to the current implementation milestone before continuing implementation work.
+Git history is the canonical audit trail. Each approved canon change set should be committed on its own, separately from code changes, so it can be reviewed and reverted independently. Separate backup copies under `_archive/` are not required for ordinary changes.
 
-Claude may maintain implementation plans and notes separately, but they remain subordinate to canon.
+Claude maintains implementation plans and notes separately, and they remain subordinate to canon.
 
 ---
 
@@ -280,8 +276,7 @@ docs/
 │   ├── MIGRATION_MANIFEST.md
 │   └── _archive/
 │       ├── PRE_SPLIT_CANON_SNAPSHOT.md
-│       ├── MIGRATION_AUDIT.md
-│       └── <historical backups as explicitly created>
+│       └── MIGRATION_AUDIT.md
 ├── plans/
 └── notes/
 ```

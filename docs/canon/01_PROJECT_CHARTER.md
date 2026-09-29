@@ -4,11 +4,11 @@
 
 ### Status
 
-This document defines the current canonical vision, architecture, constraints, development philosophy, implementation rules, long-term direction, and initial vertical-slice scope for the project.
+This document defines the project's core vision and the non-negotiable design principles that every other canonical document must obey.
 
-It is the project's primary source of truth unless explicitly superseded by a later approved revision.
+Together with the rest of the canonical corpus under `docs/canon/`, it is the project's primary source of truth unless explicitly superseded by a later approved revision. Architecture details, subsystem rules, development rules, long-term direction, and the initial vertical-slice scope live in the subsystem, release, and development documents indexed by `00_DOCUMENT_AUTHORITY_AND_INDEX.md`.
 
-All contributors, coding agents, design discussions, and implementation plans should treat this document as the shared authoritative description of the project.
+All contributors, coding agents, design discussions, and implementation plans should treat this document, together with that corpus, as the shared authoritative description of the project.
 
 This document is intentionally comprehensive.
 
@@ -40,13 +40,13 @@ The guiding balance is:
 
 ### Canonical Corpus Note
 
-Document authority, hierarchy, and synchronization rules are now defined in:
+Document authority, hierarchy, and change-control rules are now defined in:
 
 ```text
 docs/canon/00_DOCUMENT_AUTHORITY_AND_INDEX.md
 ```
 
-The original charter status/preservation statement above is retained verbatim as approved canon. Detailed subsystem material has been relocated losslessly to canonical subsystem files according to `MIGRATION_MANIFEST.md`.
+The charter status/preservation statement above was retained verbatim through the corpus split. On 2026-09-28 its first paragraphs were updated with user approval so they describe this document's post-split role accurately; the original monolithic wording remains preserved in `_archive/PRE_SPLIT_CANON_SNAPSHOT.md`. Detailed subsystem material has been relocated losslessly to canonical subsystem files according to `MIGRATION_MANIFEST.md`.
 
 ---
 
@@ -224,6 +224,8 @@ For a single-player user, local inference is therefore:
 The mod must not require a paid cloud service in order to provide its complete intended gameplay.
 
 There will be no non-AI gameplay fallback mode.
+
+This means the game will not offer an alternative mode that replaces AI-driven interaction with a non-AI design. It does not mean every authoritative state transition must wait on inference. Core deterministic actions, such as accepting, progressing, or turning in a quest, should remain available through deterministic interaction affordances, with AI enriching them where it adds something fundamentally different (§2.2). If inference becomes unavailable, AI-dependent interactions pause with clear status (`04` §2.9–§2.10) while authoritative world state and deterministic progression remain intact.
 
 It is acceptable for local mode to require reasonably modern hardware.
 
@@ -434,3 +436,85 @@ Model capability scales the quality of cognition.
 It does not scale control over authoritative game state.
 
 This also allows the game to improve naturally as better models and hardware become available in the future.
+
+---
+
+## 2.22 Managed Local AI Provisioning Is the Intended Default Consumer Experience
+
+The normal Windows single-player local-AI experience should not require the player to understand or manually configure AI infrastructure.
+
+For the consumer-facing local edition, the intended setup experience is approximately:
+
+```text
+Install mod
+    ↓
+Launch Minecraft
+    ↓
+automatic hardware check
+    ↓
+"Additional AI files required: X GB"
+    ↓
+player approves download
+    ↓
+approved runtime + curated model are provisioned automatically
+    ↓
+integrity checks
+    ↓
+runtime starts automatically
+    ↓
+AI ready
+    ↓
+play
+```
+
+The player should not normally need to understand or manually configure:
+
+- inference servers
+- localhost endpoints
+- GGUF files
+- quantization
+- context windows
+- model identifiers
+- command-line model installation
+
+The local consumer path should use a project-curated set of model packages matched to supported hardware tiers. Hardware detection should select the recommended tier automatically where practical. Manual override exists for exceptional hardware or advanced users rather than as the ordinary setup path.
+
+The current intended Windows hardware tiers are conceptually centered around supported configurations such as:
+
+- approximately 8 GB VRAM
+- approximately 12 GB VRAM
+- approximately 16 GB or more VRAM
+
+The exact model, quantization, memory budget, and minimum/recommended hardware attached to each tier must be selected from testing and may change between releases.
+
+The public mod documentation should clearly distinguish:
+
+- the local-AI path and its stated hardware requirements
+- the cloud/BYOK path for players who cannot or do not want to run the supported local package
+
+The local edition should remain the simplest path for a machine that meets the stated requirements.
+
+Managed local setup should minimize technical explanation while remaining accurate about what the software is doing. A normal prompt may say, for example:
+
+> **Additional AI files required**  
+> This version uses local AI processing and requires an additional X GB download.  
+> **Download and Continue**
+
+Detailed runtime/model information may live behind an Advanced Details surface. Exact disclosure wording must remain compatible with applicable platform, distribution, licensing, and legal requirements.
+
+The project should prefer a self-contained user-space installation that does not require machine-wide administration. Where possible:
+
+- files live in a user-writable project/game-managed directory
+- no permanent Windows service is installed
+- the inference runtime runs only while needed by the game
+- the game/runtime manager starts it automatically
+- it shuts down automatically when the relevant Minecraft session ends
+
+The relevant session is the period during which an RPG world is open in the running game. The runtime starts when an RPG world begins opening, so model loading overlaps world loading. It stops when no RPG world remains open, after a short grace period that avoids reloading the model when the player quickly re-enters a world. It never outlives the Minecraft process, including when Minecraft exits abnormally.
+
+The default consumer experience is therefore:
+
+> **Install, approve the required local-AI download, and play.**
+
+Manual local-backend configuration remains an advanced-user path. Cloud/BYOK remains an alternative compute path, especially for unsupported or weaker machines.
+

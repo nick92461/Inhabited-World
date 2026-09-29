@@ -36,6 +36,10 @@ This establishes a clean technical and product boundary for:
 
 The project may ultimately behave like a total conversion, but the RPG generator should still be represented architecturally as its own world preset rather than an invisible global override.
 
+Minecraft does not persist which world preset was selected; it persists only the resulting world-generation configuration. The RPG world's identity must therefore be carried by persisted configuration that the project owns, such as its own chunk-generator type and its own dimension type. Every per-world rule (structures, features, spawning, portals, raids, patrols, planning, simulation) keys off that persisted identity, never off the preset selection alone, so the rules keep applying after every reload.
+
+Where Minecraft already exposes a per-dimension data-driven control for a required behavior, prefer it over a player-mutable gamerule. For example, the RPG dimension type can disable raid starts, pillager patrols, and portal-spawned piglins directly.
+
 ## Version 0.1 Dimension Scope
 
 Version 0.1 is Overworld-only.
@@ -149,6 +153,29 @@ SEMANTIC GEOGRAPHIC ANALYSIS
 PERSISTED WORLDPLAN
 ```
 
+## Pre-Generation of the Finite World
+
+Because the RPG world is small and finite, its entire playable area should be generated during world creation, before the player enters, rather than lazily during play.
+
+This:
+
+- removes runtime chunk-generation load that would otherwise compete with gameplay and local inference
+- lets the planner verify that required POIs actually generated, rather than assuming placement succeeded
+- lets geographic analysis use or verify against actual generated terrain
+- prevents later world-generation changes from creating visible seams in an existing world
+
+World creation may therefore take longer and should show clear progress.
+
+The planner still chooses sites before generation from deterministic terrain-generation data (§8). Pre-generation adds verification and analysis after generation; it does not replace planning.
+
+## Terrain Beyond the Playable Boundary
+
+Terrain outside the playable boundary exists only to be seen, never reached. It should be cheap to generate, for example open ocean that also forms the natural geographic boundary, rather than full terrain the player can never enter.
+
+## World-Generation Configuration Is Versioned
+
+A shipped world-generation configuration (generator settings, noise, dimension type, structure placement) must not be edited in place in a later mod version. Changes use a new versioned configuration, so existing worlds keep generating exactly as they were created.
+
 ---
 
 # 7. The WorldPlan Is Generated Once
@@ -214,6 +241,8 @@ Useful derived facts may include:
 - road leaves town through western gate
 
 These facts become structured world state.
+
+The lazy-generation caution above applies to planning, which happens before any chunk exists. Once the finite map has been pre-generated (§6), geographic facts may be derived from, or verified against, the actual generated terrain.
 
 AI does not calculate basic geometry.
 

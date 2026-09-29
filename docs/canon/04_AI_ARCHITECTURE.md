@@ -82,7 +82,7 @@ The eventual default single-player backend mode should be:
 
 At startup:
 
-1. Check for a compatible local inference backend.
+1. Check for a compatible local inference backend: the managed local runtime (§2.22.1) or a local/private backend the user explicitly configured.
 2. If one is available and healthy, use local inference.
 3. Otherwise check for a configured cloud backend/API key.
 4. If configured and valid, use cloud inference.
@@ -218,6 +218,8 @@ In that case the credential belongs to the server deployment, not to its connect
 
 Finding something listening on localhost is not enough.
 
+The game should not blindly probe arbitrary local ports and send prompts to whatever answers. A local backend is either the managed runtime the game itself launched (§2.22.5) or an endpoint the user or operator explicitly configured.
+
 Detection should distinguish between:
 
 - endpoint discovered
@@ -310,6 +312,264 @@ Statements such as:
 > Cloud mode improved FPS from X to Y.
 
 must come from controlled benchmarks on named configurations.
+
+---
+
+## 2.22.1 Managed Local Runtime Provisioning
+
+Sections 2.22.1–2.22.8 detail the charter principle `01` §2.22 (Managed Local AI Provisioning Is the Intended Default Consumer Experience).
+
+For supported Windows single-player installations, the intended default local-AI path is a **managed local backend** rather than requiring users to install and configure an inference runtime manually.
+
+The mod may use a small runtime-management/bootstrap layer responsible for:
+
+- GPU and VRAM detection
+- selecting the supported local model tier
+- determining whether required files are already present
+- downloading approved runtime/model files when missing
+- verifying downloaded files
+- starting the local inference runtime
+- health checking the runtime
+- restarting it when appropriate
+- shutting it down when the Minecraft session no longer needs it
+- reporting setup failures in understandable language
+
+This bootstrap/runtime-management layer is infrastructure. It does not own NPC cognition, game context, validation, or authoritative state. Those responsibilities remain in the normal AI orchestration/game architecture.
+
+Conceptually:
+
+```text
+Minecraft / Integrated Server
+        ↓
+ManagedLocalBackend
+        ↓
+Local AI Runtime Manager
+        ↓
+approved inference runtime
+        ↓
+curated local model
+```
+
+Advanced users may still be allowed to point the project at a compatible manually managed local backend where supported.
+
+---
+
+## 2.22.2 Windows Is the Required Consumer Platform for Managed Local Provisioning
+
+The managed consumer local-AI path is only required to support Windows.
+
+macOS and Linux support are not required by the project unless explicitly added later.
+
+This allows the project to optimize the ordinary installation/runtime lifecycle for one operating-system environment rather than multiplying deployment complexity before it provides gameplay value.
+
+The Java/Fabric gameplay architecture should remain generally clean and portable where practical, but the project is not obligated to ship or support equivalent native AI bootstrap behavior on non-Windows platforms.
+
+---
+
+## 2.22.3 Curated Hardware and Model Tiers
+
+The normal local user should not select arbitrary models from a large catalog.
+
+The project should hand-pick, test, and publish supported model packages for a small number of hardware tiers.
+
+The current intended tier structure is conceptually:
+
+```text
+~8 GB VRAM
+    → supported local tier A
+
+~12 GB VRAM
+    → supported local tier B
+
+~16+ GB VRAM
+    → supported local tier C
+```
+
+These thresholds are design targets, not permanent promises about exact models or memory use. The actual support matrix should be based on measured behavior for each release.
+
+Model selection should consider at minimum:
+
+- reliable structured output
+- context capacity
+- dialogue/reasoning quality
+- VRAM/RAM consumption
+- prompt-processing speed
+- generation speed
+- stability with the project's orchestration contract
+- license/distribution suitability
+
+The same mod build should preferably select among these supported local packages rather than requiring a separate mod binary for every VRAM tier.
+
+Tiers are added as they are benchmarked. Version 0.1 is required to ship only tier A (~8 GB VRAM) plus the manual override (§2.22.4); tiers B and C follow once measured (see `09`).
+
+---
+
+## 2.22.4 Automatic Hardware Detection and Manual Override
+
+The project should automatically inspect supported Windows hardware where practical and recommend/select the appropriate curated local-AI tier.
+
+The ordinary flow should not ask the player to identify their graphics card manually if the software can determine it itself.
+
+Detection should focus on the information actually needed for supported-tier selection, such as:
+
+- active/discrete GPU identity
+- dedicated VRAM
+- other capability information required by the chosen inference runtime
+
+A manual override should remain available because:
+
+- multi-GPU systems may be ambiguous
+- integrated/discrete configurations can be unusual
+- users may deliberately prefer a smaller model
+- detection can fail
+- future hardware may not match the built-in table cleanly
+
+The mod page/documentation should still publish explicit hardware requirements so users can choose the local or cloud path before installation.
+
+---
+
+## 2.22.5 Local Runtime Lifecycle
+
+The managed local inference runtime should ordinarily be an application-owned process rather than a permanently installed system service.
+
+Preferred lifecycle:
+
+```text
+Minecraft starts / local AI becomes needed
+(an RPG world begins opening; model loading overlaps world loading)
+        ↓
+verify required files
+        ↓
+launch local inference process
+        ↓
+health check
+        ↓
+serve AI requests
+        ↓
+Minecraft session/world closes
+(no RPG world remains open after a short grace period, or Minecraft exits)
+        ↓
+graceful runtime shutdown
+        ↓
+forced termination only if graceful shutdown fails
+```
+
+The relevant session is defined in `01` §2.22. The runtime never outlives the Minecraft process, including when Minecraft exits abnormally.
+
+Where practical, the runtime/model should live inside a user-writable game/project-managed directory rather than requiring installation into protected system locations.
+
+The project should avoid requiring:
+
+- a permanent Windows service
+- machine-wide runtime installation
+- administrator elevation
+- unrelated background processes that remain running after Minecraft closes
+
+If a future technical dependency genuinely requires elevation, that should be treated as an explicit product/security decision rather than assumed by default.
+
+### 2.22.5.1 Managed Runtime Network Isolation
+
+The ordinary managed local-AI runtime is an internal application component. It should not become a general-purpose network service merely because the underlying inference runtime exposes an HTTP API.
+
+For the managed consumer path:
+
+- bind the inference service to the loopback interface only
+- never expose the managed runtime to the LAN, Wi-Fi network, Internet, or other external interfaces by default
+- use a per-launch unguessable access credential/token or an equivalently strong local authorization mechanism so unrelated local software cannot freely submit inference requests
+- choose a dynamically assigned or otherwise collision-safe local port rather than relying on one globally assumed fixed port where practical
+- pass the current endpoint/port and access credential directly to the managed backend rather than persisting the launch credential as ordinary long-lived configuration
+- invalidate the per-launch credential when the runtime terminates
+- configure cross-origin/browser access conservatively so web content cannot treat the managed runtime as an unauthenticated local service
+- fail closed if the runtime cannot be launched with the required network-isolation guarantees
+
+These rules apply to the **managed automatic consumer runtime**.
+
+They do not prohibit an advanced user or server operator from deliberately configuring a manually managed inference server on a LAN or another host. Such exposure is an explicit advanced deployment decision and must not be silently enabled by the normal consumer path.
+
+The security objective is:
+
+> **Only the Minecraft: Inhabited managed backend should be able to use the automatically launched local runtime by default.**
+
+Threat model: the per-launch credential and loopback binding protect against web content, other machines on the network, and other operating-system user accounts. They cannot protect against malicious software already running as the same user, which could equally inspect Minecraft's own memory; the project must not claim otherwise.
+
+The credential should reach the runtime through a channel less exposed than command-line arguments, which ordinary tools display to any program the user runs (for example, an environment variable of the child process). It must never be written to logs, crash reports, or diagnostic output, and the runtime launch command must not be logged with the credential in it.
+
+---
+
+## 2.22.6 Managed Download Security and Integrity
+
+Automatic provisioning must not become arbitrary remote-code execution.
+
+Every runtime/model artifact automatically downloaded by the managed local path should come from a project-approved source and should be verifiable before execution/use.
+
+The implementation should use appropriate protections such as:
+
+- HTTPS transport
+- pinned/approved download metadata
+- cryptographic hashes
+- code signatures where practical
+- explicit supported versions
+- atomic or recoverable installation/update behavior
+
+The project should prefer official upstream runtime releases or reproducibly built/signed project distributions.
+
+Model redistribution or automatic download must respect the selected model's license and required notices.
+
+A failed integrity check must prevent the artifact from being executed or treated as a valid model package.
+
+### 2.22.6.1 Distribution-Platform Compatibility
+
+Mod distribution platforms have their own rules about what a mod may download or execute. Setup must not depend on a single delivery mechanism that one platform might prohibit.
+
+The provisioning flow should therefore support:
+
+- **automatic provisioning:** after the player approves, the game downloads the approved files itself (the preferred, simplest path)
+- **guided provisioning:** the game opens the official approved download page, the player downloads the file, and the game finds, verifies, and installs it with the same integrity checks
+
+Both paths end in the same verified installation. Which path a given distribution channel uses is a release decision, confirmed against that platform's current rules before publishing there. Wherever a platform permits it, the automatic path is used.
+
+Each publication must disclose that the mod requires an additional local-AI download, its approximate size, what it contains, and where it comes from.
+
+---
+
+## 2.22.7 Consumer Setup Disclosure Should Be Minimal but Accurate
+
+The ordinary player should not be burdened with AI-infrastructure terminology.
+
+Normal setup may communicate the requirement as an additional local-AI component/download rather than explaining model architecture, quantization, inference servers, or implementation details.
+
+The user-facing prompt should communicate the facts that materially affect consent, such as:
+
+- an additional download is required
+- approximate download size
+- local AI processing is being enabled
+- the files run locally while the game uses local AI
+
+More technical information may be available behind an Advanced Details surface.
+
+The project should not deliberately misrepresent what is being downloaded or executed. Exact language must remain compatible with applicable distribution-platform requirements, software/model licenses, security requirements, and law.
+
+---
+
+## 2.22.8 Cloud/BYOK Is the Alternative Path, Not the Default Setup Burden
+
+For a supported Windows machine that meets local requirements, the user should not need an API account merely to obtain the normal experience.
+
+The consumer choice should conceptually be:
+
+```text
+SUPPORTED LOCAL HARDWARE
+    → automatic managed local package
+    → no recurring inference fee
+
+UNSUPPORTED / WEAKER HARDWARE OR USER PREFERENCE
+    → cloud/BYOK setup
+    → user supplies provider credentials
+```
+
+Users choosing the cloud path may reasonably accept additional configuration because that path substitutes remote inference for hardware they do not provide locally.
+
+The local path remains the preferred low-friction experience on machines that meet published requirements.
 
 ---
 
@@ -476,6 +736,8 @@ A request contains everything the backend needs to perform inference.
 
 A result contains structured data for later authoritative validation.
 
+Where structured output is required, the request also carries a backend-neutral description of the permitted output: for example, the allowed decisions, required fields, and numeric ranges derived from current authoritative state. Each backend translates that description into whatever constrained-output mechanism it supports, such as a JSON Schema, a grammar, or a tool schema. The same description drives validation. Constrained decoding reduces invalid output, but it never replaces validation.
+
 This makes the same backend contract usable for:
 
 - local testing
@@ -549,6 +811,14 @@ while authoritative quest reward remains ten.
 
 Action and prose should remain semantically atomic.
 
+The preferred structure for action-bearing turns is **decision first, presentation second**:
+
+1. the model produces only the constrained structured decision
+2. Java validates it and commits the authoritative change
+3. the reply prose is generated afterward to express the committed outcome
+
+Prose is then never generated for an action that was not committed, which applies the outcome-first principle of `03` §40 to dialogue. Numbers, names, and directions in the prose are still checked deterministically where practical. The second step reuses the first step's prompt, so prefix caching keeps its cost low.
+
 The system may retry with updated state.
 
 A short temporary in-character waiting/error line is permissible as error handling.
@@ -613,12 +883,19 @@ Prompt ordering should optimize stable-prefix reuse where practical.
 
 Likely order:
 
-1. NPC identity/personality
-2. stable world facts
-3. relevant quest/state
-4. relevant memories
-5. recent dialogue
-6. current player input
+1. shared instructions and output rules common to all NPCs
+2. shared world knowledge common to the relevant population
+3. NPC identity/personality and NPC-specific knowledge
+4. relevant quest/state
+5. relevant memories
+6. recent dialogue
+7. current player input
+
+Material shared by many NPCs comes before NPC-specific material, so one cached prefix serves every NPC. Placing NPC identity first would invalidate the cache every time the player addresses a different NPC.
+
+Shared world knowledge must respect the knowledge/truth distinction (`03` §34). Only information that the relevant NPCs could all plausibly know belongs in the shared prefix. Anything else is NPC-specific knowledge.
+
+(Before 2026-09-28 this list began with NPC identity/personality, followed by stable world facts. It was reordered with user approval for cross-NPC prefix reuse.)
 
 Stable material near the beginning may improve:
 

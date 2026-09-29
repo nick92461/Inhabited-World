@@ -32,6 +32,10 @@ Do not hardwire gameplay to one local model implementation.
 
 Do not hardwire AI ownership to the client.
 
+Do not require ordinary supported Windows local users to manually install or configure an inference runtime/model when the managed provisioning path is the intended consumer experience.
+
+Do not download and execute arbitrary native binaries or model artifacts without project-approved source metadata and integrity verification.
+
 Do not preserve vanilla content merely because Mojang generates it by default when it conflicts with intentional RPG-world design.
 
 Do not leave hostile spawning uncontrolled where semantic regions should govern it.
@@ -108,7 +112,7 @@ Preferred responsibility split:
 
 # 60. Instructions for Coding Agents
 
-This document is the canonical design charter.
+The canonical corpus under `docs/canon/` (indexed by `00_DOCUMENT_AUTHORITY_AND_INDEX.md`, with `01_PROJECT_CHARTER.md` as its constitution) is the canonical design charter.
 
 Treat it as the project's primary source of truth.
 
@@ -197,6 +201,35 @@ However:
 Do not build speculative multiplayer infrastructure.
 
 Preserve the boundary.
+
+## Managed Local-AI Provisioning Discipline
+
+When implementing the Windows consumer local-AI path:
+
+- keep runtime/model provisioning separate from game/domain logic
+- prefer user-writable application/game storage over machine-wide installation
+- avoid administrator elevation unless a real dependency requires it
+- do not install a permanent Windows service merely to run local inference
+- launch the inference runtime as an application-owned process
+- bind the managed runtime to loopback only; never expose it to the network by default
+- protect the managed runtime with a per-launch unguessable access token or equivalently strong local authorization mechanism
+- pass that token to the runtime through a channel less exposed than command-line arguments (for example an environment variable), and never write it or the launch command containing it to logs, crash reports, or diagnostics (`04` §2.22.5.1)
+- prefer a dynamic/collision-safe local port and communicate the resolved endpoint directly to the managed backend
+- keep browser/cross-origin access disabled or otherwise constrained so arbitrary web content cannot freely call the managed runtime
+- treat deliberately exposed LAN/remote inference servers as an advanced manual configuration path, not normal managed behavior
+- perform explicit readiness/health checking
+- shut the runtime down when it is no longer needed
+- ensure abnormal Minecraft termination does not intentionally leave the managed inference process running indefinitely; use Windows process-lifetime mechanisms where practical so the child runtime dies with its owning game/setup process
+- use curated project-approved model/runtime packages
+- support both automatic and guided provisioning paths ending in the same verified installation (`04` §2.22.6.1)
+- prefer libraries Minecraft already ships (for example, hardware information and Windows process management) over new dependencies
+- verify downloaded artifacts before use
+- fail safely on hash/signature/integrity mismatch
+- keep exact model/runtime details available for diagnostics even if the ordinary UI hides technical complexity
+- allow manual override for advanced users or failed hardware detection
+- never silently switch a failed local setup to paid cloud inference
+
+The normal user-facing goal is low-friction setup, not concealment of unsafe behavior.
 
 ## Performance Is Architectural
 
@@ -322,7 +355,7 @@ Do not silently reinterpret project direction.
 
 # 61. Required First Response From a New Coding Agent
 
-When a new coding agent receives this charter:
+When a new coding agent receives the canonical corpus:
 
 **Do not modify files.**
 

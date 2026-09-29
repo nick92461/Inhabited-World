@@ -165,8 +165,11 @@ Nothing more unless needed to validate a foundational assumption.
 Implement:
 
 - dedicated RPG world preset
+- persisted RPG-world identity (own chunk-generator type and dimension type; see `02` §4)
 - finite map
 - boundary behavior
+- cheap terrain beyond the playable boundary
+- pre-generation of the finite playable area during world creation, with progress display
 - Overworld-only slice
 - Nether disabled
 - End disabled
@@ -364,9 +367,17 @@ Complete:
 - README
 - architecture diagram
 - setup documentation
-- local model setup
+- Windows managed local-AI provisioning for the consumer local edition
+- automatic supported-hardware detection and curated local model-tier selection (Version 0.1 ships tier A, ~8 GB VRAM, plus manual override; further tiers follow as benchmarked, `04` §2.22.3)
+- automatic and guided provisioning paths (`04` §2.22.6.1)
+- first-run additional-file download flow
+- integrity verification for managed runtime/model packages
+- automatic local inference process startup/health check/shutdown
+- advanced/manual local-backend override where supported
 - demo video
 - useful automated tests
+
+Managed provisioning belongs here rather than in the early AI-engine milestones so product setup work does not distort core architecture development.
 
 BYOK and dedicated multiplayer must not delay Version 0.1.
 
@@ -506,6 +517,10 @@ Version 0.1 succeeds when a player can:
 
 34. Complete the experience using local inference without paid API calls.
 
-35. Maintain reasonable performance through sparse, scoped, asynchronous, validated inference.
+35. On the supported Windows consumer local path, complete first-run AI setup without manually installing/configuring an inference server or model: the software detects supported hardware, recommends/selects the curated tier (tier A in Version 0.1), requests approval for the additional download, provisions and verifies required files, launches the local runtime, and reports readiness.
+
+36. Observe the managed local inference process shutting down with the relevant Minecraft session rather than remaining as an unnecessary permanent background service. That means it stops when no RPG world remains open after the grace period, and always when Minecraft exits, including abnormally (`01` §2.22).
+
+37. Maintain reasonable performance through sparse, scoped, asynchronous, validated inference.
 
 Dedicated multiplayer does not need to be demonstrated in Version 0.1.
