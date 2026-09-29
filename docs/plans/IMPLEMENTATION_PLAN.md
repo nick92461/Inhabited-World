@@ -1,4 +1,4 @@
-# Implementation Plan — Minecraft: Inhabited
+# Implementation Plan — Inhabited World
 
 **Status:** Tier 5, NON-CANONICAL (see `docs/canon/00_DOCUMENT_AUTHORITY_AND_INDEX.md` §2). This is Claude's architecture/implementation plan for building the canon. It never overrides `docs/canon/`. If they disagree, canon wins and this file is corrected.
 
@@ -24,7 +24,8 @@
   - `08` §50: schema-as-transport. `08` §51: pin dev identity early.
   - `09`: Phase 2A (identity, boundary, pre-generation), Phase 10 (tier A, both provisioning paths), DoD 35–36.
   - `10`: §60/§61 stale self-references; provisioning discipline (token channel, both paths, prefer libraries Minecraft already ships).
-  - Removed from disk: `_archive/CLAUDE_PRE_HIERARCHY_CHARTER_BACKUP.md` (in git at eaee97e) and the two uncommitted `_archive/PRE_2026-09-28_*` backup folders (the first equals eaee97e's canon; the second differed by the one heading line above). **The user performs these deletions.**
+  - Removed from disk: `_archive/CLAUDE_PRE_HIERARCHY_CHARTER_BACKUP.md` (in git at eaee97e) and the two uncommitted `_archive/PRE_2026-09-28_*` backup folders (the first equals eaee97e's canon; the second differed by the one heading line above). Done by the user; committed in f4423ed.
+- 2026-09-28: **retitled "Minecraft: Inhabited" → "Inhabited World"** (user decision). Canon: `00` (title, workspace path `Inhabited World/`, history note) and `04` §2.22.5.1 (security objective names the project). `MIGRATION_MANIFEST.md` and `_archive/` intentionally keep the old title.
 
 **Section references** use the pre-split section numbers, which the canon files retain (see `docs/canon/MIGRATION_MANIFEST.md`). New sections get new unused numbers (`00` §7). File key:
 
@@ -85,13 +86,29 @@ Note: `04` §2.6 is BYOK. The managed-provisioning principle is `01` §2.22, and
 
 **Baseline:** Minecraft 26.3, Fabric Loader 0.19.5, Fabric API 0.161.0+26.3, Loom **1.18.2 (pinned 2026-09-28; was the floating `1.18-SNAPSHOT`, which resolved to the same artifacts)**, Java 25, split client/common sources. Mod version `0.1.0-dev`.
 
-**Workspace layout:** `docs/` lives at the `Minecraft Inhabited/` workspace root. The mod codebase is the CHILD directory `inhabited_mod/`. Never move `docs/` into the codebase.
+**Naming (2026-09-28):**
+
+| What | Name |
+|---|---|
+| Title / mod name | Inhabited World |
+| Mod ID / resource namespace | `inhabited_world` |
+| Java package | `io.github.nick92461.inhabitedworld` |
+| Classes | `InhabitedWorld`, `InhabitedWorldClient` |
+| Mixin configs | `inhabited_world.mixins.json`, `inhabited_world.client.mixins.json` |
+| Gradle project / Maven group | `inhabited_world` / `io.github.nick92461.inhabitedworld` |
+| Workspace folder | `Inhabited World/` |
+| Codebase folder | `inhabited_world_mod/` |
+| GitHub repo | `nick92461/Inhabited-World` |
+
+Before the rename these were "Minecraft: Inhabited", `inhabited`, `io.github.nick92461.inhabited`, `Minecraft Inhabited/`, `inhabited_mod/` and `Minecraft-Inhabited`.
+
+**Workspace layout:** `docs/` lives at the `Inhabited World/` workspace root. The mod codebase is the CHILD directory `inhabited_world_mod/`. Never move `docs/` into the codebase.
 
 **Git (decided by the user 2026-09-25):**
 - One repo at the WORKSPACE ROOT, pushed to GitHub by the user (never by Claude).
 - Canon changes are committed separately from code (`00` §7).
 - The root `.gitattributes` marks `docs/canon/**` as `-text`, so `core.autocrlf=true` can't rewrite canon bytes.
-- **CI:** GitHub only reads workflows at the repo root. The workflow was edited in place (working directory `inhabited_mod`, Gradle caching, artifact path) and must be moved by the user to `.github/workflows/build.yml`. The repo is private, so runs use the free Actions minutes; Gradle caching keeps each run short.
+- **CI:** GitHub only reads workflows at the repo root, so the workflow now lives at `.github/workflows/build.yml` (moved in 793478b). It has working directory `inhabited_world_mod`, Gradle caching, and artifact path `inhabited_world_mod/build/libs/`. The repo is private, so runs use the free Actions minutes; Gradle caching keeps each run short.
 
 **Packages (`08` §53):** worldgen, worldstate, poi, region, npc, memory, dialogue, quest, simulation, spawn, ai/{backend, orchestration, context, validation, telemetry, config, runtime, hardware, provisioning}, persistence, network; client: ui. Each is created in the phase that first needs it.
 
@@ -100,12 +117,12 @@ Note: `04` §2.6 is BYOK. The managed-provisioning principle is `01` §2.22, and
 ### P2A build decisions
 
 **RPG-world identity (`02` §4). This fixes the flaw found in the audit.** Minecraft doesn't persist the chosen preset, so identity is carried by two things we own:
-1. **Dimension type `inhabited:rpg_overworld`** (data, spike step 1):
+1. **Dimension type `inhabited_world:rpg_overworld`** (data, spike step 1):
    - a copy of vanilla `dimension_type/overworld.json` (26.3)
    - plus `minecraft:gameplay/can_start_raid: false`, `minecraft:gameplay/can_pillager_patrol_spawn: false`, `minecraft:gameplay/nether_portal_spawns_piglin: false`
    - Verified in the jar: exact attribute IDs; the only biome setting any of them is mushroom_fields, which sets patrols `false`, so the dimension-level values hold.
    - Portals matter for piglins because a lit portal spawns zombified piglins in the Overworld even when no Nether exists.
-2. **Chunk-generator type `inhabited:rpg`** (Java, spike step 2):
+2. **Chunk-generator type `inhabited_world:rpg`** (Java, spike step 2):
    - a subclass of `NoiseBasedChunkGenerator` with its own `MapCodec`, registered in the chunk-generator registry
    - It overrides `ChunkGenerator.createState(HolderLookup<StructureSet>, RandomState, long)` (public in 26.3) to pass a filtered lookup. That gives a per-world structure **allowlist** with no mixin. Initially the list is empty; our town/POI sets come later.
    - An allowlist automatically excludes structures that future MC versions add (26.x added `abandoned_camp`).
@@ -113,14 +130,20 @@ Note: `04` §2.6 is BYOK. The managed-provisioning principle is `01` §2.22, and
 - **Versioned config (`02` §6):** once shipped, `rpg_overworld`, the `rpg` generator settings and any noise/density configs are never edited in place. A change gets a new ID (e.g. `_v2`).
 
 **Spike steps:**
-- **Step 1 (data only; re-handed 2026-09-28, result pending):**
-  - `data/inhabited/dimension_type/rpg_overworld.json`
-  - `data/inhabited/worldgen/world_preset/rpg_world.json` (overworld stem only, `"type": "inhabited:rpg_overworld"`, vanilla noise generator + `minecraft:overworld` settings for now)
-  - tag `data/minecraft/tags/worldgen/world_preset/normal.json` (`replace: false`)
-  - lang `generator.inhabited.rpg_world`
+- **Step 1 (data only): DONE 2026-09-28, user-tested.**
+  - Files:
+    - `data/inhabited_world/dimension_type/rpg_overworld.json`
+    - `data/inhabited_world/worldgen/world_preset/rpg_world.json` (overworld stem only, `"type": "inhabited_world:rpg_overworld"`, vanilla noise generator + `minecraft:overworld` settings for now)
+    - tag `data/minecraft/tags/worldgen/world_preset/normal.json` (`replace: false`)
+    - lang `assets/inhabited_world/lang/en_us.json`, key `generator.inhabited_world.rpg_world` = "Inhabited World"
   - `WorldPreset.requireOverworld` requires only the overworld (verified).
-  - Test: preset listed; world creates and looks normal; no nether/end "Saving chunks" lines; portal-lighting outcome; `/execute in minecraft:the_nether …` response; no dimension-type errors in the log.
-- **Step 2 (Java):** the `inhabited:rpg` generator type + structure allowlist + a log line proving identity survives reload.
+  - Results: world type listed; world creates and looks normal; `/execute in minecraft:the_nether …` → `Unknown dimension 'minecraft:the_nether'`; save logs only `minecraft:overworld`.
+  - Portal behaviour, read from 26.3 code:
+    - `BaseFireBlock.inPortalDimension(Level)` only checks that the level KEY is OVERWORLD or NETHER, so a portal still lights in the RPG overworld.
+    - `NetherPortalBlock.getPortalDestination` returns null when `getLevel(NETHER)` is null, so there is no teleport.
+    - Piglin spawning is off via the dimension attribute.
+    - **Decision:** block ignition in RPG worlds with a tiny mixin on `BaseFireBlock.inPortalDimension` (step 3), so no dead purple portal appears.
+- **Step 2 (Java):** the `inhabited_world:rpg` generator type + structure allowlist + a log line proving identity survives reload.
 - **Step 3:** feature suppression and the spawn hook (below).
 - **Step 4:** pre-generation + boundary (below).
 
@@ -134,7 +157,7 @@ Note: `04` §2.6 is BYOK. The managed-provisioning principle is `01` §2.22, and
 - **Primary choke point:** `SpawnPlacements.checkSpawnRules(EntityType, ServerLevelAccessor, EntitySpawnReason, BlockPos, RandomSource)`. It has entity, reason and position before the entity is constructed, so it's allocation-free. First rule: the human-like type ban in RPG worlds (natural witch and zombie-villager spawns). **Verify** which spawn paths bypass it; any bypassing path that can produce a prohibited type gets its own narrow hook.
 - **Wandering traders:** remove `WanderingTraderSpawner` from the RPG overworld's `List<CustomSpawner>` (a `ServerLevel` constructor parameter), rather than relying on a gamerule players can change. The same approach can drop `VillageSiege`. Keep `PhantomSpawner`.
 - **Patrols, raids, portal piglins:** handled by the dimension-type attributes above.
-- **Portals:** block Nether-portal ignition in RPG worlds (`02` §4). Final approach depends on the step-1 portal result.
+- **Portals:** block Nether-portal ignition in RPG worlds (`02` §4) via `BaseFireBlock.inPortalDimension` (see step 1 results).
 - Note: 26.3 has a `minecraft:gameplay/natural_mob_spawns` environment attribute. It's a possible data path for spawn lists, but per-region semantics still need the Java hook.
 
 **Pre-generation and boundary (`02` §6, §8; spike step 4):**
@@ -300,11 +323,13 @@ Config: RX 7600 8 GB / Ryzen 5 5600 / 16 GB RAM, Windows. llama.cpp b11221 Vulka
 ## Open items
 - OS keychain dependency when BYOK is built (`04` §2.11 vs `08` §52 "avoid unnecessary dependencies"). Future only.
 - Desert-well suppression is Claude's implementation call under `06` §15; the user may keep them.
-- **Pending user actions (2026-09-28):**
-  - move `inhabited_mod/.github` to the repo root
-  - delete the two Example mixin classes (the configs are already emptied)
-  - delete the three redundant `_archive` items
-  - commit canon and code separately
+- **Pending user actions (rename, 2026-09-28):**
+  - rename the folders `inhabited_mod` → `inhabited_world_mod` and `Minecraft Inhabited` → `Inhabited World`
+  - rename the GitHub repo to `Inhabited-World` and update the remote
+  - relink Gradle in IntelliJ
+  - delete the pre-rename test saves (they reference `inhabited:rpg_overworld`, which no longer exists)
+  - commit
+- (Done 2026-09-28 by the user: CI moved, Example mixins and redundant `_archive` items deleted, committed in f4423ed + 793478b.)
 
 ## Risks to verify
 - 8 GB VRAM shared with Minecraft: VALIDATED by spike run 1 (≈3 GB headroom at render distance 16). Re-check with heavier settings/shaders when tiers are finalized.

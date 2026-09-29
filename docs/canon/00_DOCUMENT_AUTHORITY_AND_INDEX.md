@@ -2,7 +2,7 @@
 
 ## Status
 
-This file defines the authority, hierarchy, change-control protocol, and canonical file layout for the Minecraft: Inhabited project.
+This file defines the authority, hierarchy, change-control protocol, and canonical file layout for the Inhabited World project.
 
 The **user is the ultimate project authority**.
 
@@ -12,12 +12,14 @@ The purpose of this arrangement is to ensure that the user and Claude always con
 
 History: from 2026-09-25 to 2026-09-28, ChatGPT was the user-designated generator of the canonical corpus, and Claude synchronized ChatGPT-generated packages onto disk. On 2026-09-28 the user retired that arrangement and assigned canon maintenance to Claude under the approval rule above.
 
-The canonical corpus is stored at the **workspace level**, not inside the mod codebase. All relative paths in this document are rooted at the `Minecraft Inhabited/` workspace directory. The eventual mod codebase is a child of that workspace and remains subordinate to the workspace-level canon.
+Also on 2026-09-28, the user retitled the project from "Minecraft: Inhabited" to **Inhabited World**, and the workspace directory from `Minecraft Inhabited/` to `Inhabited World/`. Historical material (`MIGRATION_MANIFEST.md` and `_archive/`) intentionally keeps the old title.
+
+The canonical corpus is stored at the **workspace level**, not inside the mod codebase. All relative paths in this document are rooted at the `Inhabited World/` workspace directory. The eventual mod codebase is a child of that workspace and remains subordinate to the workspace-level canon.
 
 Conceptually:
 
 ```text
-Minecraft Inhabited/
+Inhabited World/
 ├── docs/
 │   ├── canon/
 │   ├── plans/

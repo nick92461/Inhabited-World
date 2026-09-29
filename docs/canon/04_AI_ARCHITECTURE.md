@@ -488,7 +488,7 @@ They do not prohibit an advanced user or server operator from deliberately confi
 
 The security objective is:
 
-> **Only the Minecraft: Inhabited managed backend should be able to use the automatically launched local runtime by default.**
+> **Only the Inhabited World managed backend should be able to use the automatically launched local runtime by default.**
 
 Threat model: the per-launch credential and loopback binding protect against web content, other machines on the network, and other operating-system user accounts. They cannot protect against malicious software already running as the same user, which could equally inspect Minecraft's own memory; the project must not claim otherwise.
 
