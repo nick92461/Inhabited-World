@@ -2,6 +2,9 @@
 # and submitted pull request. This can help catch issues that only occur on
 # certain platforms or Java versions, and provides a first line of defence
 # against bad commits.
+#
+# This file must live at the REPOSITORY ROOT (.github/workflows/build.yml);
+# GitHub ignores workflows anywhere else. The Gradle project is in inhabited_mod/.
 
 name: build
 on: [pull_request, push]
@@ -9,6 +12,9 @@ on: [pull_request, push]
 jobs:
   build:
     runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: inhabited_mod
     steps:
       - name: checkout repository
         uses: actions/checkout@v6
@@ -19,6 +25,8 @@ jobs:
         with:
           java-version: '25'
           distribution: 'microsoft'
+      - name: setup gradle (caches dependencies between runs)
+        uses: gradle/actions/setup-gradle@v6
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
       - name: build
@@ -27,4 +35,4 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: Artifacts
-          path: build/libs/
+          path: inhabited_mod/build/libs/

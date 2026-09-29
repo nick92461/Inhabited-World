@@ -3,13 +3,12 @@
 	"id": "inhabited",
 	"version": "${version}",
 	"name": "Inhabited",
-	"description": "This is an example description! Tell everyone what your mod is about!",
+	"description": "A finite, persistent, procedurally generated RPG world whose people think with local AI.",
 	"authors": [
-		"Me!"
+		"Nicholas Bottorf"
 	],
 	"contact": {
-		"homepage": "https://fabricmc.net/",
-		"sources": "https://github.com/FabricMC/fabric-example-mod"
+		"sources": "https://github.com/nick92461/Minecraft-Inhabited"
 	},
 	"license": "All-Rights-Reserved",
 	"icon": "assets/inhabited/icon.png",

@@ -20,6 +20,14 @@ loom {
 			sourceSet sourceSets.client
 		}
 	}
+
+	runs {
+		client {
+			// Fixed dev identity: the offline UUID is derived from the username, so test worlds
+			// keep the same player across launches (canon 08 §51).
+			programArgs "--username", "Dev"
+		}
+	}
 }
 
 dependencies {
