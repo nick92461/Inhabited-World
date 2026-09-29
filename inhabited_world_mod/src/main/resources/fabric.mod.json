@@ -1,0 +1,37 @@
+{
+	"schemaVersion": 1,
+	"id": "inhabited_world",
+	"version": "${version}",
+	"name": "Inhabited World",
+	"description": "A finite, persistent, procedurally generated RPG world whose people think with local AI.",
+	"authors": [
+		"Nicholas Bottorf"
+	],
+	"contact": {
+		"sources": "https://github.com/nick92461/Inhabited-World"
+	},
+	"license": "All-Rights-Reserved",
+	"icon": "assets/inhabited_world/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"io.github.nick92461.inhabitedworld.InhabitedWorld"
+		],
+		"client": [
+			"io.github.nick92461.inhabitedworld.client.InhabitedWorldClient"
+		]
+	},
+	"mixins": [
+		"inhabited_world.mixins.json",
+		{
+			"config": "inhabited_world.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}
