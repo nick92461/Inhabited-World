@@ -292,6 +292,7 @@ Implement:
 - retry/error handling
 - telemetry
 - fake backend
+- priority-aware inference scheduler: player-facing requests first; all other inference deferred until the game is idle or static, with a bounded wait for deferred work (`04` §36)
 
 The AI infrastructure initially supports social/NPC cognition.
 
@@ -353,6 +354,12 @@ Measure:
 - model size
 - inference queue behavior
 - backend-neutral telemetry
+- frame pacing: frame-time spikes (hitch rate), not only average FPS
+- the difference between active gameplay and static scenes or dialogue screens during inference
+- system RAM of the runtime and of the game
+- player-facing latency while background inference is pending
+
+Record each measurement as an evidence record (`10` §60 Testing Strategy; `04` §2.14.1).
 
 Optimize scheduling/context before simply increasing model size.
 

@@ -321,6 +321,8 @@ Favor automated testing for deterministic logic including:
 
 Do not over-test trivial Minecraft wiring.
 
+Performance, hardware and model-selection experiments are recorded under `docs/notes/` with the named configuration, raw data, method and interpretation, and indexed in `04` §2.14.1. Conclusions that change design go through the canon change process (`00` §4–§7); the record preserves the evidence they rest on.
+
 ## Backend Neutrality
 
 Local inference first.

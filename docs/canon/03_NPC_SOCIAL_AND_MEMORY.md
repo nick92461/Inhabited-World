@@ -98,6 +98,10 @@ AI may interpret known information.
 
 It does not invent the authoritative basis for knowledge.
 
+AI-written summaries of memories (for example, memory compression for long-term storage or for prompts) are derived, non-authoritative text. The authoritative memory remains the structured records created from validated events. A summary may be used as presentation or prompt material only after it is checked against its source records. Otherwise it is discarded.
+
+Evidence (`04` §2.14.1): a 4B model refused or confused 17–22% of summary tasks and embellished others, for example turning "accepted the request to find the hammer" into "helped find the hammer".
+
 ---
 
 # 34. Knowledge vs Truth

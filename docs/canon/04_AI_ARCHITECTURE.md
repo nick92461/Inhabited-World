@@ -313,6 +313,28 @@ Statements such as:
 
 must come from controlled benchmarks on named configurations.
 
+### 2.14.1 Recorded Local-Inference Evidence
+
+Measured results that canon relies on are recorded under `docs/notes/` with their named configuration, raw data, method and interpretation, and indexed here. Canon states the rules; the records hold the evidence.
+
+**2026-10-02: local LLM stress tests, runs 1 and 2** (`docs/notes/2026-10-02_llm_stress_tests/REPORT.md`)
+
+Configuration:
+- **Hardware:** AMD Radeon RX 7600 8 GB, Ryzen 5 5600, 16 GB RAM, Windows 10.
+- **Runtime:** llama.cpp b11221 (Vulkan) running Qwen3.5-4B Q4_K_M with two server slots.
+- **Game:** Minecraft 26.3 development client at Fancy graphics, render distance 16.
+- **Workload:** a 10-minute simulated finished-mod workload (negotiation, geography, chat, background memory summaries) with 1,100–1,450-token prompts.
+- **Runs:** run 1 used a heavy desktop and unlimited FPS; run 2 used a minimal desktop with vsync at 120 Hz.
+
+Key measurements:
+
+- VRAM peaked at 7.1 GB of 8 GB under a heavy desktop and 6.2 GB under a minimal one. The runtime and Minecraft together used about 4.9 GB.
+- Player-facing replies took a median of 3–4 seconds (95th percentile roughly 5.5–8.5 seconds). Background requests sharing the runtime made player-facing replies 30–66% slower.
+- Token generation coincided with frame-time hitches only while the game was also doing work. During active building, frames over 33 ms were about three times as frequent while the model generated (p = 0.008). During a static stretch with the model busy 63% of the time there were almost none. Prompt processing showed no significant effect.
+- The 4B model kept every constrained decision legal and every reply consistent with the committed outcome. It also fabricated answers about facts its NPC did not know, sometimes mis-spelled numbers as words (180 as "eighteen hundred", 610 as "sixty-one"), and failed or embellished 17–22% of memory summaries.
+
+Rules informed by this evidence: §2.22.3, §28, §29.1, §36, §37, §38; `03` §33; `09` §54 Phase 9; `10` §60 Testing Strategy.
+
 ---
 
 ## 2.22.1 Managed Local Runtime Provisioning
@@ -401,6 +423,16 @@ Model selection should consider at minimum:
 The same mod build should preferably select among these supported local packages rather than requiring a separate mod binary for every VRAM tier.
 
 Tiers are added as they are benchmarked. Version 0.1 is required to ship only tier A (~8 GB VRAM) plus the manual override (§2.22.4); tiers B and C follow once measured (see `09`).
+
+Tier validation is whole-system. A tier's model is accepted only after measuring, on a representative machine for that tier with Minecraft running and an ordinary desktop open:
+- total VRAM and system RAM
+- frame pacing during inference (frame-time spikes, not only average FPS), in both active and static gameplay
+- player-facing latency
+- response quality against the orchestration contract
+
+Model size alone is not evidence.
+
+Evidence to date (§2.14.1) shows that tier A's headroom is largely consumed by the runtime, Minecraft and an ordinary desktop at about the 4-billion-parameter, 4-bit class. A larger default model for tier A requires new evidence that it fits.
 
 ---
 
@@ -987,6 +1019,10 @@ NPCs are not general assistants.
 
 They are people in the world.
 
+Gameplay-critical numbers (distances, rewards, prices, counts) are rendered by deterministic code and given to the model as literal text to repeat. The model never computes, converts or spells them out itself. Reply verification must recognize numbers written in words as well as digits.
+
+Evidence (§2.14.1): a 4B model wrote 180 as "eighteen hundred" and 610 as "sixty-one", while ignoring an instruction to use digits.
+
 ---
 
 # 29. Intent Interpretation
@@ -1013,6 +1049,20 @@ requestedReward = 20
 ```
 
 Deterministic systems then reason about the structured request.
+
+## 29.1 Knowledge Gating Happens in Java
+
+When a question has a deterministic answer (where a place is, how far, which direction, what something costs), the model does not decide whether the NPC knows it. The steps are:
+
+1. The orchestration layer interprets the intent and subject.
+2. It checks the NPC's knowledge (`03` §34).
+3. It tells the model either the facts to state, or that the NPC does not know and must say so in character.
+
+The model phrases the answer. It does not choose whether one exists.
+
+This applies the decision-first pattern of §24 to factual answers.
+
+Evidence (§2.14.1): asked about facts its NPC did not know, a 4B model fabricated answers ("there isn't a river", "that place doesn't exist") instead of admitting ignorance.
 
 ---
 
@@ -1128,6 +1178,14 @@ Good opportunities include:
 
 Dedicated servers similarly prioritize player-facing inference and may defer background cognition under load.
 
+Measured evidence (§2.14.1) turns the single-player guidance above from "may" into a requirement.
+
+**Architectural requirement.** The mod must be architected with an inference scheduler that classifies every request by the priorities above. It must defer all inference that is not a player-facing request someone is actively waiting on until the game is idle or static: a dialogue screen, a menu, sleeping, or a period without player activity. This is a required design feature of the local single-player path, not an optional optimization. Deferred work has a bounded wait; past its limit it is dropped, simplified or merged, and never allowed to accumulate (`03` §40.3). No subsystem may call a model backend around the scheduler (§22).
+
+- **Background (low-priority) inference must not share the local runtime concurrently with a player-facing request. It waits.** Overlapping background work made player-facing replies 30–66% slower.
+- **On the local single-player path, background inference must not run during active gameplay.** It runs during dialogue screens, menus, sleeping, idle periods or other static moments, or it is paced so it cannot accumulate. While the player was actively building, any model generation, player-facing or background, roughly tripled frame-time spikes. In a static scene it caused almost none.
+- **Player-facing inference during a dialogue screen is the expected low-impact case**, because the player is static while the NPC answers.
+
 ---
 
 # 37. Performance Philosophy
@@ -1139,6 +1197,10 @@ The objective is sparse, efficient inference that preserves responsive gameplay.
 A temporary FPS reduction while an NPC thinks locally may be acceptable.
 
 Persistent degradation is not.
+
+Responsiveness is judged by frame pacing as well as average FPS. Frequent frame-time spikes (stutter) during inference are a form of degradation even when average FPS stays high.
+
+Evidence (§2.14.1): during active play, model generation tripled frames over 33 ms, while average FPS under vsync fell from 118 to 85. Long freezes were rare.
 
 Optimize for:
 
@@ -1180,6 +1242,8 @@ Architecture should help small models through:
 - narrow tasks
 - constrained output
 - deterministic validation
+
+For the ~8 GB local tier, measured headroom (§2.14.1) points to the lower end of this range.
 
 Stronger models remain supported.
 
