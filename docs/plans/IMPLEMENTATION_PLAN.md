@@ -2,7 +2,7 @@
 
 **Status:** Tier 5, NON-CANONICAL (see `docs/canon/00_DOCUMENT_AUTHORITY_AND_INDEX.md` §2). This is Claude's architecture/implementation plan for building the canon. It never overrides `docs/canon/`. If they disagree, canon wins and this file is corrected.
 
-**Maintained by:** Claude (coding agent), with the user. Since 2026-09-28 Claude also maintains the canon itself, but changes it only with the user's explicit approval (`00` §4–§7). Migrated on 2026-09-25 from Claude's private working notes when the canon moved from the monolithic v6 charter to the hierarchical corpus.
+**Maintained by:** Claude (coding agent), with the user. Since 2026-09-28 Claude also maintains the canon itself, but changes it only with the user's explicit approval or direction (`00` §4–§7). Migrated on 2026-09-25 from Claude's private working notes when the canon moved from the monolithic v6 charter to the hierarchical corpus.
 
 **Canon change log:**
 - 2026-09-25: bootstrap (split corpus), from a ChatGPT package.
@@ -14,7 +14,7 @@
   - `02` §4: persisted RPG identity and per-dimension controls preferred over gamerules. `02` §6: new subsections on pre-generation, terrain beyond the boundary, and versioned worldgen config. `02` §8: facts from real terrain after pre-generation.
   - `04`:
     - §2.8/§2.12: no blind localhost probing.
-    - Managed sections numbered §2.22.1–§2.22.8, plus §2.22.5.1 isolation (threat model, credential channel) and §2.22.6.1 distribution compatibility (automatic + guided paths).
+    - Managed sections numbered §2.22.1–§2.22.8, plus §2.22.5.1 isolation and §2.22.6.1 distribution compatibility.
     - §2.22.3: v0.1 ships tier A only.
     - §2.22.5: lifecycle wording.
     - §23: output constraints in the request.
@@ -23,18 +23,32 @@
   - `05` §32: two monotonic clocks per event.
   - `08` §50: schema-as-transport. `08` §51: pin dev identity early.
   - `09`: Phase 2A (identity, boundary, pre-generation), Phase 10 (tier A, both provisioning paths), DoD 35–36.
-  - `10`: §60/§61 stale self-references; provisioning discipline (token channel, both paths, prefer libraries Minecraft already ships).
-  - Removed from disk: `_archive/CLAUDE_PRE_HIERARCHY_CHARTER_BACKUP.md` (in git at eaee97e) and the two uncommitted `_archive/PRE_2026-09-28_*` backup folders (the first equals eaee97e's canon; the second differed by the one heading line above). Done by the user; committed in f4423ed.
-- 2026-09-28: **retitled "Minecraft: Inhabited" → "Inhabited World"** (user decision). Canon: `00` (title, workspace path `Inhabited World/`, history note) and `04` §2.22.5.1 (security objective names the project). `MIGRATION_MANIFEST.md` and `_archive/` intentionally keep the old title.
+  - `10`: §60/§61 stale self-references; provisioning discipline.
+  - Removed: `_archive/CLAUDE_PRE_HIERARCHY_CHARTER_BACKUP.md` and two uncommitted backup folders (committed in f4423ed).
+- 2026-09-28: **retitled "Minecraft: Inhabited" → "Inhabited World"** (user decision; 1d77ac7). `00` (title, workspace path, history note) and `04` §2.22.5.1. `MIGRATION_MANIFEST.md` and `_archive/` keep the old title.
+- 2026-10-02: **local-inference evidence change set** (user-directed: "save these test results and your interpretation in the canon, fine-tune canon and plan"). Purely additive: 74 lines added, 0 removed. Evidence record: `docs/notes/2026-10-02_llm_stress_tests/REPORT.md`.
+  - `04`:
+    - new §2.14.1, the evidence index with key measurements
+    - §2.22.3: tier validation is whole-system, with frame pacing; tier A sits at the ~4B Q4 class unless new evidence says otherwise
+    - §28: gameplay-critical numbers are rendered by Java as literal text; verification reads number words
+    - new §29.1: knowledge gating happens in Java
+    - §36: "may" strengthened to "should": background yields to player-facing requests and doesn't run during active gameplay on the local path; dialogue-screen inference is the low-impact case
+    - §37: frame pacing, not average FPS
+    - §38: tier A sits at the low end of 3B–8B
+  - `03` §33: AI-written memory summaries are non-authoritative and must be checked against source records or discarded.
+  - `09` Phase 9: measure hitches, active-versus-static play, system RAM, and player latency with background work pending; record evidence.
+  - `10` §60 Testing Strategy: experiments are recorded in `docs/notes/` and indexed in `04` §2.14.1.
+  - **Follow-up the same day (user directive): the deferral rule is a REQUIREMENT, not a suggestion.** `04` §36 now has an "Architectural requirement" paragraph (inference scheduler; all non-player-waiting inference deferred until idle/static; bounded wait; no backend calls around the scheduler) and "must" wording, and `09` Phase 5 lists the scheduler as a deliverable. Open design item: define "idle/static" concretely (input inactivity threshold, screen types) in P5.
+  - Conflict review: no conflict with `01`. Consistent with `01` §2.2/§2.3, `03` §34, `04` §24 conversation concurrency, and `07` §2.19 (the scheduling rule is scoped to the local single-player path).
 
 **Section references** use the pre-split section numbers, which the canon files retain (see `docs/canon/MIGRATION_MANIFEST.md`). New sections get new unused numbers (`00` §7). File key:
 
 | Sections | File |
 |---|---|
 | §1, §2.1–2.5, §2.22 (managed provisioning principle) | `01_PROJECT_CHARTER.md` |
-| §4–§12 (incl. §6 subsections Pre-Generation / Terrain Beyond the Boundary / Versioned Config), §14, §16 | `02_WORLD_WORLDGEN_AND_POIS.md` |
+| §4–§12 (incl. §6 subsections), §14, §16 | `02_WORLD_WORLDGEN_AND_POIS.md` |
 | §18–19, §33–34, §39–43 | `03_NPC_SOCIAL_AND_MEMORY.md` |
-| §2.6–2.14, §2.22.1–§2.22.8 (incl. §2.22.5.1, §2.22.6.1), §2.20, §20–30, §35–38 | `04_AI_ARCHITECTURE.md` |
+| §2.6–2.14 (incl. §2.14.1 evidence), §2.22.1–§2.22.8 (incl. §2.22.5.1, §2.22.6.1), §2.20, §20–30 (incl. §29.1), §35–38 | `04_AI_ARCHITECTURE.md` |
 | §31, §32, §44 | `05_QUESTS_AND_WORLD_HISTORY.md` |
 | §13, §15, §17 | `06_HOSTILES_SPAWNING_AND_COMBAT.md` |
 | §2.15–2.19, §58 | `07_MULTIPLAYER_AND_SERVER_ARCHITECTURE.md` |
@@ -50,7 +64,11 @@ Note: `04` §2.6 is BYOK. The managed-provisioning principle is `01` §2.22, and
 ## Always-on checks (before any design/code handoff)
 
 - v0.1 scope? `09` §55, `10` §60 scope priority, `10` §57 no speculative frameworks.
-- AI involved? `10` §60 AI discipline (facts, context, decision, output, validation, executor); `01` §2.3, §2.5; `04` §23 plain data + output constraints; §24 lifecycle + decision-first.
+- AI involved?
+  - `10` §60 AI discipline (facts, context, decision, output, validation, executor)
+  - `01` §2.3, §2.5
+  - `04` §23 plain data + output constraints; §24 lifecycle + decision-first
+  - **§28 Java-rendered numbers; §29.1 knowledge gating; §36 scheduling (background yields, not during active play); §37 frame pacing**
 - Spawn/hostile work? `10` §60 Hostile-System Discipline: entity type, spawn reason, region, policy, encounter state, persistence.
 - MP hedge (`10` §60 Multiplayer Architectural Discipline, `08` §2.21): state lives server-side; client UI only via protocol messages; plain-data AI contracts; explicit world/request identity; validation at the authoritative boundary. Don't build networking.
 - General:
@@ -59,7 +77,11 @@ Note: `04` §2.6 is BYOK. The managed-provisioning principle is `01` §2.22, and
   - semantic IDs
   - everything scoped to the **persisted RPG-world identity** (`02` §4), never to the preset choice
   - outcome before presentation
-- Handoff format per `10` §60 Communication Style. The user types new code. On 2026-09-28 the user authorized Claude to make mundane edits to EXISTING files for the audit changes. That authorization doesn't cover new files or large unseen code. NEVER `git push` (`10` §57.1).
+- Handoff:
+  - Format per `10` §60 Communication Style. The user types new code.
+  - Claude may make mundane edits to EXISTING files only when the user authorizes that task. **Errors in code the user typed are answered with Before/After snippets for the user to apply.** Claude does not edit those files.
+  - NEVER `git push` (`10` §57.1).
+- Performance/model experiments get an evidence record in `docs/notes/` and an index entry in `04` §2.14.1 (`10` §60).
 
 ## Canon to re-read per phase
 
@@ -68,11 +90,11 @@ Note: `04` §2.6 is BYOK. The managed-provisioning principle is `01` §2.22, and
 - **P2B:** `06` §17.1–17.6; `09` §54 Phase 2B, DoD 10, 13–15.
 - **P3:** `02` §8–10, §16; `06` §17.3, §17.7–17.8, §17.12; `08` §49; `09` §54 Phase 3, DoD 16–19.
 - **P4:** `01` §2.1 (deterministic affordances); `03` §18–19, §33–34; `05` §31–32 (two clocks); `04` §35; `08` §49, §51; `09` §54 Phase 4.
-- **P5:** `01` §2.4; `07` §2.18; `04` §2.20, §20–27 (§23 output constraints, §24 decision-first); `08` §50; `09` §54 Phase 5; `10` §60.
-- **P6:** `04` §26–29 (§26 shared-first order).
+- **P5:** `01` §2.4; `07` §2.18; `04` §2.20, §20–27 (§23 output constraints, §24 decision-first), §36 (scheduling); `08` §50; `09` §54 Phase 5; `10` §60.
+- **P6:** `04` §26–29 (§26 shared-first order, §28 numbers, §29.1 knowledge gating).
 - **P7:** `01` §2.3, §2.5; `04` §30.
-- **P8:** `05` §32; `03` §33–34.
-- **P9:** `04` §36–38, §2.14; `09` DoD 37.
+- **P8:** `05` §32; `03` §33 (incl. non-authoritative summaries), §34.
+- **P9:** `04` §2.14 + §2.14.1, §36–38; `09` §54 Phase 9, DoD 37; `10` §60 Testing Strategy.
 - **P10:**
   - `09` §54 Phase 10, DoD 35–36
   - `01` §2.22
@@ -84,7 +106,7 @@ Note: `04` §2.6 is BYOK. The managed-provisioning principle is `01` §2.22, and
 
 ## Project plan (decisions, each tied to canon)
 
-**Baseline:** Minecraft 26.3, Fabric Loader 0.19.5, Fabric API 0.161.0+26.3, Loom **1.18.2 (pinned 2026-09-28; was the floating `1.18-SNAPSHOT`, which resolved to the same artifacts)**, Java 25, split client/common sources. Mod version `0.1.0-dev`.
+**Baseline:** Minecraft 26.3, Fabric Loader 0.19.5, Fabric API 0.161.0+26.3, Loom **1.18.2** (pinned 2026-09-28), Java 25, split client/common sources. Mod version `0.1.0-dev`.
 
 **Naming (2026-09-28):**
 
@@ -102,13 +124,13 @@ Note: `04` §2.6 is BYOK. The managed-provisioning principle is `01` §2.22, and
 
 Before the rename these were "Minecraft: Inhabited", `inhabited`, `io.github.nick92461.inhabited`, `Minecraft Inhabited/`, `inhabited_mod/` and `Minecraft-Inhabited`.
 
-**Workspace layout:** `docs/` lives at the `Inhabited World/` workspace root. The mod codebase is the CHILD directory `inhabited_world_mod/`. Never move `docs/` into the codebase.
+**Workspace layout:** `docs/` lives at the `Inhabited World/` workspace root. The mod codebase is the CHILD directory `inhabited_world_mod/`. Never move `docs/` into the codebase. Research records live in `docs/notes/` (e.g. `docs/notes/2026-10-02_llm_stress_tests/`).
 
 **Git (decided by the user 2026-09-25):**
 - One repo at the WORKSPACE ROOT, pushed to GitHub by the user (never by Claude).
-- Canon changes are committed separately from code (`00` §7).
+- Canon changes are committed separately from code (`00` §7). Stage docs with `git add docs`, not `git add .`, when unfinished code is in the working tree.
 - The root `.gitattributes` marks `docs/canon/**` as `-text`, so `core.autocrlf=true` can't rewrite canon bytes.
-- **CI:** GitHub only reads workflows at the repo root, so the workflow now lives at `.github/workflows/build.yml` (moved in 793478b). It has working directory `inhabited_world_mod`, Gradle caching, and artifact path `inhabited_world_mod/build/libs/`. The repo is private, so runs use the free Actions minutes; Gradle caching keeps each run short.
+- **CI:** `.github/workflows/build.yml` at the repo root, with working directory `inhabited_world_mod`, Gradle caching, and artifacts from `inhabited_world_mod/build/libs/`.
 
 **Packages (`08` §53):** worldgen, worldstate, poi, region, npc, memory, dialogue, quest, simulation, spawn, ai/{backend, orchestration, context, validation, telemetry, config, runtime, hardware, provisioning}, persistence, network; client: ui. Each is created in the phase that first needs it.
 
@@ -116,57 +138,69 @@ Before the rename these were "Minecraft: Inhabited", `inhabited`, `io.github.nic
 
 ### P2A build decisions
 
-**RPG-world identity (`02` §4). This fixes the flaw found in the audit.** Minecraft doesn't persist the chosen preset, so identity is carried by two things we own:
-1. **Dimension type `inhabited_world:rpg_overworld`** (data, spike step 1):
+**RPG-world identity (`02` §4).** Minecraft doesn't persist the chosen preset, so identity is carried by two persisted things we own:
+1. **Dimension type `inhabited_world:rpg_overworld`** (data; step 1, DONE):
    - a copy of vanilla `dimension_type/overworld.json` (26.3)
    - plus `minecraft:gameplay/can_start_raid: false`, `minecraft:gameplay/can_pillager_patrol_spawn: false`, `minecraft:gameplay/nether_portal_spawns_piglin: false`
-   - Verified in the jar: exact attribute IDs; the only biome setting any of them is mushroom_fields, which sets patrols `false`, so the dimension-level values hold.
-   - Portals matter for piglins because a lit portal spawns zombified piglins in the Overworld even when no Nether exists.
-2. **Chunk-generator type `inhabited_world:rpg`** (Java, spike step 2):
-   - a subclass of `NoiseBasedChunkGenerator` with its own `MapCodec`, registered in the chunk-generator registry
-   - It overrides `ChunkGenerator.createState(HolderLookup<StructureSet>, RandomState, long)` (public in 26.3) to pass a filtered lookup. That gives a per-world structure **allowlist** with no mixin. Initially the list is empty; our town/POI sets come later.
-   - An allowlist automatically excludes structures that future MC versions add (26.x added `abandoned_camp`).
-   - Everything per-world checks the level's generator type or dimension type key. The world requires the mod to load, which is acceptable.
-- **Versioned config (`02` §6):** once shipped, `rpg_overworld`, the `rpg` generator settings and any noise/density configs are never edited in place. A change gets a new ID (e.g. `_v2`).
+   - Verified in the jar: exact attribute IDs; the only biome setting any of them is mushroom_fields (patrols `false`), so the dimension-level values hold.
+   - A lit portal spawns zombified piglins in the Overworld even with no Nether, which is why that attribute matters.
+2. **Noise-settings entry `inhabited_world:rpg_overworld`** (step 2):
+   - a verbatim copy of vanilla `worldgen/noise_settings/overworld.json` (3.9 KB) under our ID, persisted in `level.dat` with the generator
+   - `RpgWorlds.isRpg(ChunkGenerator)` = "is a `NoiseBasedChunkGenerator` whose `generatorSettings()` key is ours"
+   - Also the home for step 4's ocean-boundary density work.
+   - (A subclass generator was planned first, but `NoiseBasedChunkGenerator` is `final`. `02` §4 says "such as its own chunk-generator type", so this satisfies it.)
+- **Versioned config (`02` §6):** once shipped, `rpg_overworld` (dimension type and noise settings) and any density configs are never edited in place. A change gets a new ID (e.g. `_v2`).
+- Everything per-world checks `RpgWorlds.isRpg(...)`. The world requires the mod to load, which is acceptable.
 
 **Spike steps:**
 - **Step 1 (data only): DONE 2026-09-28, user-tested.**
-  - Files:
-    - `data/inhabited_world/dimension_type/rpg_overworld.json`
-    - `data/inhabited_world/worldgen/world_preset/rpg_world.json` (overworld stem only, `"type": "inhabited_world:rpg_overworld"`, vanilla noise generator + `minecraft:overworld` settings for now)
-    - tag `data/minecraft/tags/worldgen/world_preset/normal.json` (`replace: false`)
-    - lang `assets/inhabited_world/lang/en_us.json`, key `generator.inhabited_world.rpg_world` = "Inhabited World"
-  - `WorldPreset.requireOverworld` requires only the overworld (verified).
-  - Results: world type listed; world creates and looks normal; `/execute in minecraft:the_nether …` → `Unknown dimension 'minecraft:the_nether'`; save logs only `minecraft:overworld`.
-  - Portal behaviour, read from 26.3 code:
-    - `BaseFireBlock.inPortalDimension(Level)` only checks that the level KEY is OVERWORLD or NETHER, so a portal still lights in the RPG overworld.
-    - `NetherPortalBlock.getPortalDestination` returns null when `getLevel(NETHER)` is null, so there is no teleport.
-    - Piglin spawning is off via the dimension attribute.
-    - **Decision:** block ignition in RPG worlds with a tiny mixin on `BaseFireBlock.inPortalDimension` (step 3), so no dead purple portal appears.
-- **Step 2 (Java):** the `inhabited_world:rpg` generator type + structure allowlist + a log line proving identity survives reload.
-- **Step 3:** feature suppression and the spawn hook (below).
+  - Files: the dimension type; `worldgen/world_preset/rpg_world.json` (overworld stem only); tag `data/minecraft/tags/worldgen/world_preset/normal.json` (`replace: false`); lang `generator.inhabited_world.rpg_world` = "Inhabited World".
+  - Results: world type listed; world looks normal; `/execute in minecraft:the_nether …` → `Unknown dimension 'minecraft:the_nether'`; save logs only `minecraft:overworld`.
+  - Portal behaviour (26.3 code):
+    - `BaseFireBlock.inPortalDimension(Level)` checks only the level KEY (OVERWORLD/NETHER), so a portal still lights.
+    - `NetherPortalBlock.getPortalDestination` returns null without a Nether, so there's no teleport.
+    - **Decision:** block ignition in RPG worlds with a mixin on `BaseFireBlock.inPortalDimension` (step 3).
+- **Step 2 (Java; HANDED OFF 2026-09-28, in progress):**
+  - Status: the user has `worldgen/RpgWorlds.java` (compiles) and the noise-settings copy. Still to apply: the two mixins, `inhabited_world.mixins.json`, `InhabitedWorld.java` (identity log line) and the one-line preset change (`settings: inhabited_world:rpg_overworld`). Then run the step 2 test: no warning; `/locate` finds no village or mineshaft; the identity log says `true`; a Default world says `false` and still finds villages.
+  - **Structure allowlist:**
+    - `ChunkGeneratorMixin`: `@ModifyArg` on the `ChunkGeneratorStructureState.createForNormal(...)` call inside `ChunkGenerator.createState`, index 4 (the `HolderLookup`). It swaps in `RpgWorlds.allowlisted(lookup)` when `isRpg`.
+    - `allowlisted` is a `HolderLookup` view: `listElements` and `get(ResourceKey)` are filtered; tags delegate (4 abstract methods in 26.3).
+    - Vanilla does all seeding, biome checks and ring placement unchanged.
+    - Rejected: `createForFlat` (it uses concentric-ring seed `0L`, not the level seed).
+  - **Experimental-warning fix:** there are two causes, both in `WorldDimensions.bake`:
+    1. The registry is experimental unless overworld + nether + end all exist (`BUILTIN_ORDER`).
+    2. A non-vanilla dimension type makes `checkStability` experimental, and entry lifecycles merge into the registry with `Lifecycle.add`.
+    - The create screen reads `allRegistriesLifecycle()` and the load path reads `complete.lifecycle() + allRegistriesLifecycle()`, so the fix sits at the source.
+    - `WorldDimensionsMixin`, active only when the overworld stem `isRpg`:
+      - `@ModifyArg` on `MappedRegistry.<init>(ResourceKey, Lifecycle)` in `bake` (index 1) → stable
+      - `@Inject` HEAD cancellable into private static `checkStability` → stable
+    - Fallback if the constructor-target `@ModifyArg` fails: `@ModifyVariable` on the lifecycle local in `bake`.
+    - Our datapack entries are stable: Fabric mod packs carry a `KnownPack`, and `ResourceManagerRegistryLoadTask` rates those `Lifecycle.stable()`.
+    - The rejected first attempt mixed into `Complete.lifecycle()`, which the create screen never reads.
+  - **Menu placement (user question):** a custom "game mode" button is Phase 10 UI polish (a client mixin on `CreateWorldScreen`). The persisted settings remain the real identity.
+- **Step 3:** feature suppression, spawn hook and portal-ignition block (below).
 - **Step 4:** pre-generation + boundary (below).
 
 **Feature suppression (`06` §15):**
-- A tiny mixin on `PlacedFeature.place(WorldGenLevel, ChunkGenerator, RandomSource, BlockPos)`: if the generator is ours and the placed feature is in the denylist, return false.
-- Denylist: `monster_room`, `monster_room_deep` (both exist in 26.3) and `desert_well`.
-- Keep geodes, fossils, ores, lakes, springs and trees.
-- Features use a denylist, so **re-audit the placed-feature list at every Minecraft version bump.**
+- A tiny mixin on `PlacedFeature.place(WorldGenLevel, ChunkGenerator, RandomSource, BlockPos)`: if `isRpg(generator)` and the placed feature is in the denylist, return false.
+- Denylist: `monster_room`, `monster_room_deep` (both in 26.3), `desert_well`. Keep geodes, fossils, ores, lakes, springs and trees.
+- **Re-audit the placed-feature list at every Minecraft version bump** (it's a denylist).
 
 **Spawn governance hook (built at the START of P2A; P2B adds region rules):**
-- **Primary choke point:** `SpawnPlacements.checkSpawnRules(EntityType, ServerLevelAccessor, EntitySpawnReason, BlockPos, RandomSource)`. It has entity, reason and position before the entity is constructed, so it's allocation-free. First rule: the human-like type ban in RPG worlds (natural witch and zombie-villager spawns). **Verify** which spawn paths bypass it; any bypassing path that can produce a prohibited type gets its own narrow hook.
-- **Wandering traders:** remove `WanderingTraderSpawner` from the RPG overworld's `List<CustomSpawner>` (a `ServerLevel` constructor parameter), rather than relying on a gamerule players can change. The same approach can drop `VillageSiege`. Keep `PhantomSpawner`.
-- **Patrols, raids, portal piglins:** handled by the dimension-type attributes above.
-- **Portals:** block Nether-portal ignition in RPG worlds (`02` §4) via `BaseFireBlock.inPortalDimension` (see step 1 results).
-- Note: 26.3 has a `minecraft:gameplay/natural_mob_spawns` environment attribute. It's a possible data path for spawn lists, but per-region semantics still need the Java hook.
+- **Primary choke point:** `SpawnPlacements.checkSpawnRules(EntityType, ServerLevelAccessor, EntitySpawnReason, BlockPos, RandomSource)`. It has entity, reason and position before construction, so it's allocation-free. First rule: the human-like type ban in RPG worlds. **Verify** which paths bypass it.
+- **Wandering traders:** remove `WanderingTraderSpawner` (and `VillageSiege`) from the RPG overworld's `List<CustomSpawner>` (a `ServerLevel` constructor parameter). Keep `PhantomSpawner`.
+- **Patrols, raids, portal piglins:** handled by the dimension-type attributes.
+- **Portals:** block ignition via `BaseFireBlock.inPortalDimension`.
+- Note: 26.3 has a `minecraft:gameplay/natural_mob_spawns` environment attribute. It's a possible data path, but per-region semantics still need the hook.
 
-**Pre-generation and boundary (`02` §6, §8; spike step 4):**
-- Generate the full ~1024×1024 playable area (~4,096 chunks) during world creation with a progress display. Measure time and memory on the dev machine, and generate in batches with unloading.
-- Beyond the boundary, generate cheap open ocean, which is also the natural boundary. Approach to decide in the spike: a custom density-function wrapper around continentalness in our noise settings, or a generator override.
+**Pre-generation and boundary (`02` §6, §8; step 4):**
+- Generate the ~1024×1024 playable area (~4,096 chunks) at world creation with progress display, in batches with unloading. Measure time and memory.
+- Generate cheap open ocean beyond the boundary, via a density-function wrapper in our noise settings or a generator-side override (decide in the spike).
 - Set the world border from the WorldPlan at creation.
-- The town and POI are still placed through the structure system with a custom placement from the WorldPlan, which gives terrain blending via the beardifier. Pre-generation then **verifies** they generated.
+- The town and POI are placed through the structure system (beardifier blending). Pre-generation **verifies** they generated.
+- Stress-test note: world building and loading caused most large hitches in run 1 (§ Local-inference evidence). Pre-generation removes runtime chunk generation from play.
 
-**Other:** every AI request tag = permanent world ID + a per-load session ID. Copying a save folder duplicates the world ID; the session ID stops a late result landing in the copy (`07` §2.18 edge case).
+**Other:** every AI request tag = permanent world ID + a per-load session ID (`07` §2.18 edge case).
 
 ### WorldPlan (`02` §6–8)
 Created once, before the first chunk generates. Persisted and immutable. Contains:
@@ -177,168 +211,182 @@ Created once, before the first chunk generates. Persisted and immutable. Contain
 - spawn marker reference (optional, `02` §16)
 - geography facts
 
-Sites are chosen from deterministic noise sampling before generation. After pre-generation, the planner **verifies** POI presence, and geography facts are derived from or checked against real blocks (e.g. whether a river really lies between town and mine). The terrain sampler is built in P2A (placement) and extended in P3 (facts). Regions exist in P2B, from the plan, before the P3 structures.
+Sites are chosen from deterministic noise sampling before generation. After pre-generation the planner **verifies** POI presence, and geography facts are derived from or checked against real blocks. The terrain sampler is built in P2A and extended in P3. Regions exist in P2B, before the P3 structures.
 
 ### Regions + spawn governance (`06` §17)
-- Regions are 3D volumes. Most-specific-wins precedence: POI > settlement > wilderness.
+- Regions are 3D volumes. Most-specific-wins: POI > settlement > wilderness.
 - One decision on (entity type, spawn reason, region). Natural and chunk-generation spawns are governed; commands, eggs and our encounters pass.
-- Pure-Java rules plus a thin mixin. An in-memory index built from the WorldPlan, with allocation-free lookup on the tick thread. A per-chunk fast path is possible: chunks entirely inside wilderness skip region checks.
-- Guaranteed encounters are persisted (not spawned / active / defeated). Their mobs are persistence-required and don't respawn on reload. Spawn them lazily when a player approaches. Vanilla should exclude persistence-required mobs from mob-cap counting; **verify in P3** so hotspots don't starve wilderness spawning.
-- Debug command reporting region, policy, reason, entity and source POI (`10` §60 Favor Inspectability).
+- Pure-Java rules plus a thin mixin, and an in-memory index from the WorldPlan with allocation-free lookup. Chunks entirely inside wilderness can skip region checks.
+- Guaranteed encounters are persisted (not spawned / active / defeated), persistence-required and spawned lazily when a player approaches. **Verify in P3** that persistence-required mobs don't count toward mob caps.
+- Debug command reporting region, policy, reason, entity and source POI (`10` §60).
 
 ### POIs (`02` §10)
-- Each POI has a semantic ID, type, bounds box, SOURCE reference (our structure now, vanilla later) and threat-profile reference.
-- Immutable facts live in the WorldPlan; mutable POI state and encounter state get their own store.
-- "Who knows about it" is answered by knowledge queries.
+- Each POI has a semantic ID, type, bounds box, SOURCE reference and threat-profile reference.
+- Immutable facts live in the WorldPlan; mutable POI and encounter state get their own store.
+- "Who knows about it" is answered by knowledge queries. These are the same queries `04` §29.1 knowledge gating uses.
 - The v0.1 POI is handcrafted.
 
 ### NPCs (`03` §18–19)
 The record is the person and holds a logical location (a semantic location ID). Bodies are reconciled against records, never saved as truth. Reputation is per player UUID.
 
 ### Persistence (`08` §49)
-- Split stores, each with a dataVersion:
-  - WorldPlan (incl. regions + world ID)
-  - POI/encounter state
-  - NPCs (incl. relationships keyed (npcId, playerUuid))
-  - quests
-  - event log
-  - memories
-- **Growing stores are SEGMENTED (decided 2026-09-28; replaces "SavedData is fine").**
-  - SavedData re-encodes a whole object on the server thread at each save, and `08` §49 forbids full rewrites of growing history.
-  - The event log and memories are therefore stored as a sequence of fixed-size segments, each its own SavedData ID, plus a small index/tail.
-  - Only the open tail segment is ever dirty; closed segments are never rewritten.
-  - Memories are segmented per NPC.
+- Split stores, each with a dataVersion: WorldPlan (incl. regions + world ID); POI/encounter state; NPCs (incl. relationships keyed (npcId, playerUuid)); quests; event log; memories.
+- **Growing stores are SEGMENTED:** fixed-size segments, each its own SavedData ID, plus a small index/tail. Only the tail is dirty; closed segments are never rewritten. Memories are segmented per NPC.
 - Codecs are reused for model output (`08` §50).
 
 ### Quests / events / memory (`05` §31–32, `03` §33–34, `01` §2.1)
 - QuestDefinition vs QuestInstance.
 - A `revision` int on important mutable objects drives stale-result checks.
-- **Every event records two clocks (`05` §32):**
-  - `ordering` = `getGameTime()`: monotonic, and it does not advance during sleep skips.
-  - `calendarDay` = our own counter in world state. It increments when the world's day clock wraps, including sleep skips, and ignores backward `/time set`.
-  - 26.x has world clocks and timelines (`default_clock: minecraft:overworld`, `timeline/day`, even `timeline/villager_schedule`). NPC schedules (P4) follow the day clock.
-- Memories are created only by Java from validated events.
-- **Deterministic quest affordances (`01` §2.1):** accept, progress and turn-in exist as plain interactions that don't need inference. AI enriches them. An inference outage pauses AI dialogue with clear status and never blocks deterministic progression.
+- **Every event records two clocks (`05` §32):** `ordering` = `getGameTime()`, and `calendarDay`, our own counter that increments on day-clock wraps including sleep and ignores backward `/time set`. NPC schedules follow the 26.x world day clock.
+- Memories are created only by Java from validated events. **Any AI-written summary is non-authoritative** (`03` §33): it's checked against its source records before use as prompt or presentation material, or discarded. Stress tests: 17–22% of 4B summaries failed, and others embellished.
+- **Deterministic quest affordances (`01` §2.1):** accept, progress and turn-in are plain interactions. An inference outage pauses AI dialogue with clear status and never blocks progression.
 
-### AI (`04` §20–27, §2.20; `08` §2.21)
+### AI (`04` §20–29, §2.20, §36–37; `08` §2.21)
 - `AiBackend` → `LocalBackend` (OpenAI-compatible HTTP); `CloudBackend` later. Plain-data request/result.
 - Context + validation always live in the owning Minecraft server.
-- Process-wide service; config holds no secrets; backend selection only at startup/reconnect/user action. No blind localhost probing (`04` §2.12): the endpoint is either the managed runtime or explicitly configured.
+- Process-wide service; config holds no secrets; backend selection only at startup/reconnect/user action; no blind localhost probing (`04` §2.12).
 - Lifecycle per `04` §24. Injectable executor. ScriptedBackend tests (incl. player disconnect, wrong-world).
 - **Decision first, presentation second (`04` §24), for action-bearing turns:**
-  - Call 1 is the constrained decision only (low temperature ~0.2–0.4, few tokens).
-  - Java validates and commits it.
-  - Call 2 generates prose for the committed outcome (higher temperature). It reuses call 1's cached prompt.
-  - Pure chat turns are a single prose call.
-  - Streaming prose to the UI becomes possible later, but number/direction checks must happen before display (sentence-level buffering).
-- **Output constraints (`04` §23, `08` §50):**
-  - The request carries a backend-neutral `OutputConstraint`: allowed decisions, fields, and int ranges computed from current state (e.g. drop `ACCEPT` when the ask exceeds the max).
-  - `LocalBackend` translates it to llama.cpp `response_format` json_schema.
-  - The same constraint drives Codec validation.
-- **Prompt order (`04` §26):**
-  - shared instructions/output rules
-  - shared common knowledge (respecting `03` §34)
-  - NPC identity + NPC-specific knowledge
-  - quest/state, memories, recent dialogue, input
-  - One cached prefix then serves every NPC.
+  1. Call 1: the constrained decision only (temperature ~0.2–0.4, few tokens).
+  2. Java validates and commits.
+  3. Call 2: prose for the committed outcome, reusing call 1's cached prompt.
+  - Pure chat is a single prose call. Streaming later needs sentence-level buffering so checks run before display.
+  - Stress tests: 25/25 decisions legal; prose matched the committed outcome every time; 2/13 lines added a stray number.
+- **Knowledge gating in Java (`04` §29.1):**
+  - Interpret the intent and subject (deterministic patterns first, model-assisted classification only where needed).
+  - Check the NPC's knowledge (`03` §34) with the same knowledge queries POIs use.
+  - The prompt then either supplies the exact facts to state or says "you do not know this; say so in character".
+  - Stress tests: without this, the 4B fabricated or wrongly denied facts in 4 of 29 geography answers.
+- **Numbers rendered by Java (`04` §28):**
+  - Distances, rewards, prices and counts are formatted by Java and placed in the prompt as literal text to repeat (e.g. "430 blocks").
+  - The verifier parses digits *and* number words (as in `tools/stress.ps1` `Get-Numbers`), and a mismatch triggers a retry or a corrected template.
+  - This supersedes the spike-era idea of "rounded/banded words". The 4B mis-spelled numbers in words ("eighteen hundred" for 180, "sixty-one" for 610).
+- **Output constraints (`04` §23, `08` §50):** the request carries a backend-neutral `OutputConstraint` (allowed decisions, fields, int ranges computed from current state). `LocalBackend` translates it to llama.cpp `response_format` json_schema, and the same constraint drives Codec validation.
+- **Prompt order (`04` §26):** shared instructions/output rules → shared common knowledge (respecting `03` §34) → NPC identity + NPC-specific knowledge → quest/state → memories → recent dialogue → input.
+  - **Cache work (measured hit rate only 32–51%; warm calls took about half the time of cold ones):**
+    - keep the per-NPC block byte-stable
+    - order memories stably (by ID or time, not by relevance score)
+    - put volatile material last
+- **Scheduling (`04` §36; measured):**
+  - The runtime serves **one request at a time** (`-np 1`) from a priority queue: player-facing first; background never concurrent with a player-facing request. Overlap cost the player 30–66% latency.
+  - **Background inference only when the scene is static:** dialogue screens, menus, sleeping, idle (no input for N seconds), or paced at most one call per long interval otherwise. During active building, any generation roughly tripled frame-time spikes; a static scene showed almost none.
 - Relevance-based trimming; token estimate + calibration.
-- Deterministic prose checks: directions, committed reward amounts, known names.
-- Negotiation inputs per `04` §30 (personality, relationship, desperation, legal range); the current offer comes from the QuestInstance.
+- Deterministic prose checks: numbers (digits and words), directions, committed reward amounts, known names.
+- Negotiation inputs per `04` §30 (personality, relationship, desperation, legal range). Quest prompts must state who pays whom: the test's ambiguous wording made the 4B invert the roles.
 - Client UI reaches server state only through network payloads, even in single-player.
-- **P5 constraint from the managed-provisioning canon (not P5 scope creep):** `LocalBackend` receives its endpoint and an optional bearer token as constructor inputs. P10's managed backend then reuses the same client with a per-launch port and token that are never persisted.
-- **llama-server config for single-player:**
-  - `-np 1`: one conversation at a time (`04` §24), full context per slot.
-  - **Keep** the RAM prompt cache (`--cache-ram`), which holds other NPCs' prefixes, but cap it (e.g. 1–2 GB) given 16 GB system RAM. Do NOT set it to 0.
-  - Measure in P9.
+- **P5 constraint from the managed-provisioning canon:** `LocalBackend` receives its endpoint and an optional bearer token as constructor inputs.
+- **llama-server config for single-player:** `-np 1`; keep the RAM prompt cache (`--cache-ram`) but cap it (and measure its share of the ~5 GB working set); flash attention and KV quantization to be measured.
 
 ### Managed local-AI provisioning (P10 only; `01` §2.22, `04` §2.22.1–§2.22.8, `10` §60)
-Late v0.1 setup/polish. The early milestones are unchanged. Planned shape:
-- **Architecture:** `ManagedLocalBackend` = a runtime manager (infrastructure only: detect → provision → verify → launch → health → stop) plus the same OpenAI-compatible `LocalBackend` client. No game or domain logic lives in the manager (`08` §53).
-- **Scope for v0.1:** tier A (~8 GB) only, plus manual override (`04` §2.22.3). Spike run 1 (Qwen3.5-4B Q4_K_M) is the first tier-A datapoint.
+Late v0.1 setup/polish. Planned shape:
+- **Architecture:** `ManagedLocalBackend` = a runtime manager (infrastructure only: detect → provision → verify → launch → health → stop) plus the same `LocalBackend` client. No game or domain logic in the manager (`08` §53).
+- **Scope for v0.1:** tier A (~8 GB) only, plus manual override.
+  - **Tier A default model class: ~4B parameters at 4-bit** (`04` §2.22.3, §38; evidence `04` §2.14.1).
+  - Current candidate: Qwen3.5-4B Q4_K_M.
+  - Q6_K only on lean desktops, if measured.
+  - Larger defaults need new evidence.
 - **Runtime:** an official upstream llama.cpp `llama-server` release, pinned by version and sha256.
-  - Vulkan build as the baseline; it's proven on the RX 7600 and also runs on NVIDIA. CUDA is an optional faster NVIDIA package, decided by benchmark.
+  - Vulkan build as the baseline; CUDA optional for NVIDIA, by benchmark.
   - Files live in a user-writable game-managed folder. No service, no elevation.
-  - Launched at **below-normal CPU priority** to reduce contention with Minecraft's threads.
-- **Lifecycle (decided 2026-09-28, `01` §2.22):**
-  - Start when an RPG world begins opening, so model load overlaps world load.
-  - Stop when no RPG world is open, after a grace period of ~60 s (tunable).
-  - Never outlive the Minecraft process.
+  - Below-normal CPU priority.
+  - **To test: lowering the process's GPU scheduling priority, and smaller `-b`/`-ub` batches, as hitch mitigations.**
+- **Lifecycle (decided 2026-09-28, `01` §2.22):** start when an RPG world begins opening; stop ~60 s after no RPG world is open; never outlive Minecraft.
 - **Network isolation (`04` §2.22.5.1):**
   - `--host 127.0.0.1`
-  - a per-launch token from `SecureRandom`, held in memory only and **passed to the child via environment variable** (llama.cpp reads `LLAMA_ARG_*` env vars; verify `LLAMA_ARG_API_KEY` at P10), never on the command line
-  - never log the launch command or the environment
-  - a free port chosen at launch, retried on bind failure
-  - fail closed if any of these can't be applied
-  - Verify at P10: llama-server's CORS defaults, and whether it accepts port 0.
-- **Process lifetime:**
-  - Normal path: graceful stop, then forced kill.
-  - Crash-safety: a Windows Job Object with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` via **JNA `jna-platform` (Kernel32), which Minecraft 26.3 already ships** (5.17.0). No FFM native-access code of our own.
-- **Hardware detection:** **OSHI 6.9.0 (shipped with Minecraft 26.3)**, `GraphicsCard` name + VRAM, with no new dependency. Manual override is always available.
-- **Distribution (`04` §2.22.6.1), decided:**
-  - **Automatic provisioning is the default everywhere:** an in-game consent screen ("Additional AI files required: X GB — Download and Continue"), then download from pinned official sources (llama.cpp GitHub releases; the model from Hugging Face) with hash verification.
-  - **Guided provisioning is the built-in fallback:** a button opens the official download page, and the mod finds, verifies and installs the file. It's used where a platform requires it, or when a download is blocked (proxies, firewalls).
-  - Research 2026-09-28:
-    - Modrinth's disclosure rule concerns *uploading data to remote servers* the user didn't choose. Localhost inference sends nothing off the machine, so it's out of scope. The download is covered by the consent screen + page disclosure.
-    - CurseForge's "External download links for files are not allowed" appears aimed at listings linking out instead of hosting files on CurseForge. CurseForge also bans executables inside uploads. Neither rule addresses runtime downloads.
-    - Precedent: MCEF auto-downloads Chromium native binaries on first launch and is published on both CurseForge and Modrinth.
-    - **Before the first CurseForge publication:** confirm with CurseForge support (one ticket).
-  - Every listing discloses the extra download, its size, contents and sources.
-- **Tiers:** B/C come after v0.1 from benchmarks. Model licences must allow redistribution or automatic download (e.g. Qwen = Apache-2.0; Gemma = Gemma Terms, with a notice pass-through requirement).
-- **LAN servers** (e.g. the 3060 PC) stay the advanced manual backend path, which canon explicitly allows. They are dev convenience, never the managed default.
+  - a per-launch `SecureRandom` token passed via environment variable (verify `LLAMA_ARG_API_KEY`), never on the command line or in logs
+  - a free port, retried on bind failure
+  - fail closed
+  - The b11221 server warns "no API key is set and CORS allows all origins", which confirms the default is open. Also verify CORS controls. Upstream plans to change the default port to 9931, so always pass an explicit port.
+- **Process lifetime:** graceful stop, then a forced kill. A Windows Job Object with `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` via JNA `jna-platform` (Minecraft ships 5.17.0).
+- **Hardware detection:** OSHI 6.9.0 (shipped with Minecraft) for `GraphicsCard` name + VRAM. Manual override always available.
+- **Distribution (`04` §2.22.6.1):**
+  - Automatic provisioning by default (consent screen, pinned official sources, hash verification).
+  - Guided provisioning as the fallback.
+  - Modrinth disclosure covers it. CurseForge to confirm with one support ticket (precedent: MCEF).
+- **Tiers B/C:** after v0.1, from benchmarks (the 3060 12 GB as the first tier B datapoint). Model licences must allow redistribution or automatic download.
+- **LAN servers** stay the advanced manual backend path.
 
 ### Future NPC-NPC
 Canon `03` §40: outcome first; server-side perception; generate once and broadcast; drop presentation before outcome.
 
-### Post-M1 inference spike: run 1 DONE 2026-09-28 (single GPU)
-Config: RX 7600 8 GB / Ryzen 5 5600 / 16 GB RAM, Windows. llama.cpp b11221 Vulkan (`llama-server -ngl 99 -c 8192 --jinja`, 4 slots, unified KV). Model: Qwen3.5-4B Q4_K_M (2.74 GB), thinking disabled per request via `chat_template_kwargs.enable_thinking=false`. Minecraft 26.3, Fancy, render distance 16.
+---
 
-- **VRAM (per-process, Task Manager Details):**
-  - llama-server ≈ 2.8M KB ≈ **2.7 GiB**, fully preallocated at load; it does not change while serving requests
-  - Minecraft (`java.exe` under runClient) ≈ 1.5M KB ≈ **1.4 GiB** at Fancy / render distance 16
-  - total with both ≈ 4.9/8.0 GB (the rest is Windows/other apps), so **~3 GB headroom**
-  - the earlier 4.1 → 4.9 GB rise was Minecraft loading chunks, not the model
-- **Speed:**
-  - generation ~30–47 tok/s
-  - warm prompt processing ~330–450 tok/s (the first-ever request pays warm-up: 24 tok/s)
-  - short NPC reply ≈ 0.5–2.2 s end to end
-- **Prefix cache:** a repeated 88-token prompt reused 84 tokens and went 4.8 s → 0.5 s. This strongly validates stable-prefix prompt order (`04` §26).
-- **FPS with Minecraft:** ~120 idle → ~80 minimum during generation, instant recovery (repeated runs). One early 24 FPS dip ~3 s after a reply did not reproduce, so it was a coincidence. Acceptable per `04` §37.
-- **Quality failures observed (4B, temp 0.7). Each is exactly what canon validation exists for:**
-  - misread number: "forty-three blocks" instead of 430
-  - invented facts ("old mill", "ridge", "a mile")
-  - negotiation `ACCEPT` at 30 when max = 25, TWICE, once with prose saying 25 (the `04` §24 prose/state mismatch case, now handled structurally by decision-first)
-- **Resulting implementation decisions:**
-  - Compute the **legal action set per request** in Java and encode it in that request's output constraint: drop `ACCEPT` when the ask exceeds the max, and constrain `amount` with a min/max range. Constrained decoding then makes illegal output impossible. Validation still runs.
-  - Decision calls use a low temperature (~0.2–0.4); flavour dialogue can run higher.
-  - Present numbers to the model in model-friendly form (rounded/banded words), and deterministically check any number or direction it states.
-  - Keep context minimal and factual to reduce invented details. Consider an explicit "only state facts listed above" instruction plus spot checks.
-- **Still TODO:**
-  - Q6_K quality comparison (3.53 GB; fits in the headroom)
-  - run 2 on the RTX 3060 12 GB server PC over LAN (Gemma 4 E4B / larger models). This doubles as the first 12 GB tier datapoint. A LAN endpoint is the advanced manual path, so binding it beyond loopback there is a deliberate dev choice.
-  - a lean single-player config: `-np 1` with a capped `--cache-ram` (not 0)
-  - a decision-first A/B: two-call vs single-call latency and correctness on the negotiation test
+## Local-inference evidence
+
+Full records live in `docs/notes/`. Canon indexes them in `04` §2.14.1.
+
+### Spike run 1, 2026-09-28 (single requests, no load script)
+- **Config:** RX 7600 8 GB / Ryzen 5 5600 / 16 GB, llama.cpp b11221 Vulkan (`-ngl 99 -c 8192 --jinja`), Qwen3.5-4B Q4_K_M (2.74 GB), Minecraft 26.3 dev client at Fancy, render distance 16.
+- **Memory:** llama-server ≈ 2.7 GiB of VRAM, preallocated. Minecraft ≈ 1.4 GiB *at that moment*; it later measured 1.9–2.1 GB under play.
+- **Speed:** generation 30–47 tok/s; warm prompt processing 330–450 tok/s; short replies 0.5–2.2 s.
+- **Prefix cache:** an 88-token prompt dropped from 4.8 s to 0.5 s.
+- **FPS:** ~120 → ~80 minimum during generation.
+- **Quality failures:** "forty-three" for 430; invented facts; `ACCEPT` at 30 above a max of 25 (twice). These led to the legal-action-set output constraint, low decision temperature, and decision-first. (The spike-era "banded number words" idea is superseded by Java-rendered numbers, `04` §28.)
+
+### Stress tests runs 1–2, 2026-10-02
+**Full record:** `docs/notes/2026-10-02_llm_stress_tests/REPORT.md`, with raw data, tools and analysis scripts.
+
+| | Run 1 (heavy desktop, unlimited FPS) | Run 2 (minimal desktop, vsync 120 Hz) |
+|---|---|---|
+| Calls / failures | 77 / 0 | 83 / 0 |
+| Player-facing p50 / p95 | ≈ 3.0–4.3 s / 6.4–8.5 s | ≈ 3.6–4.2 s / 5.5–7.2 s |
+| Generation alone / overlapped by background | 23.6 / 15.7 tok/s | 24.0 / 16.2 tok/s |
+| Peak VRAM (of 8,192 MB) | 7,108 | 6,182 |
+| Runtime + Minecraft VRAM | ~4.9 GB | ~4.7 GB |
+| System RAM available (min) | 279 MB | 549 MB |
+| llama-server RAM working set | (not logged) | ~5.1 GB |
+
+**Conclusions** (confidence as rated in the report):
+- Tier A stays in the 4B Q4 class (H).
+- Background must yield and must not run during active play (H).
+- Generation stutters the game only when the game is also busy: a static scene stayed clean with the model 63% busy, while building tripled frames over 33 ms (p = 0.008) (H).
+- The 4B's failures are knowledge gating, number spelling and summaries, not decisions (H).
+- The mechanism (GPU contention, plus a possible paging contribution) is unproven (M).
+
+**Pass criteria (my proposal) against results:**
+
+| Criterion | Result |
+|---|---|
+| Hard validation failures = 0 | **pass** in both runs |
+| VRAM ≤ ~6 GB under a heavy desktop | fail at 7.1 (our own ~4.9 GB is fine) |
+| FPS floor ≥ ~60 during generation | not met in either run, but Minecraft's own floor was also below 60 without the model |
+| Cold 2k-token prompt ≤ ~5–6 s | borderline: 1.1–1.4k-token cold prompts took 3.7–6.0 s |
+
+The criteria should be revised to frame-pacing terms after the scheduling run.
+
+**Tools:** `tools/stress.ps1` and `tools/gpulog.ps1` in the record folder. Working copies are in `C:\llm\`. AMD logging goes to `C:\Users\Nick\AppData\Local\AMD\CN\`.
+
+### Next experiments (in order)
+1. `-np 1` + `-DeferBackground`, with half the run standing still and half building.
+2. Flash attention + `q8_0` KV cache (VRAM, speed).
+3. 4B Q6_K on a lean desktop.
+4. GPU scheduling priority and smaller batches as hitch mitigations.
+5. llama-server RAM: `--cache-ram 256/0`, `-np 1`, `--no-mmap`.
+6. A launcher-like JVM heap (`-Xmx2G`); GC logging if large hitches persist.
+7. Prefix-cache hit rate after stabilizing the per-NPC prefix and memory order.
+8. The 3060 12 GB as a tier B / LAN datapoint.
+9. A decision-first versus single-call A/B on latency.
 
 ---
 
 ## Open items
-- OS keychain dependency when BYOK is built (`04` §2.11 vs `08` §52 "avoid unnecessary dependencies"). Future only.
+- **Colibri / GLM-5.2 (744B MoE, experts streamed from NVMe), evaluated 2026-10-02: NOT for v0.1 or any player-waiting path.**
+  - Reported speed is ~0.05–1.06 tok/s, with ~370 GB of weights on disk and one generation at a time.
+  - Possible future niche: a rare background "Director" on the LAN server (`11` §45).
+  - Revisit after v0.1 through the manual backend path, benchmarked first.
+- OS keychain dependency when BYOK is built (`04` §2.11 vs `08` §52). Future only.
 - Desert-well suppression is Claude's implementation call under `06` §15; the user may keep them.
-- **Pending user actions (rename, 2026-09-28):**
-  - rename the folders `inhabited_mod` → `inhabited_world_mod` and `Minecraft Inhabited` → `Inhabited World`
-  - rename the GitHub repo to `Inhabited-World` and update the remote
-  - relink Gradle in IntelliJ
-  - delete the pre-rename test saves (they reference `inhabited:rpg_overworld`, which no longer exists)
-  - commit
-- (Done 2026-09-28 by the user: CI moved, Example mixins and redundant `_archive` items deleted, committed in f4423ed + 793478b.)
+- Pass criteria to be rewritten in frame-pacing terms (hitch rate in active versus static play) after the scheduling experiment.
 
 ## Risks to verify
-- 8 GB VRAM shared with Minecraft: VALIDATED by spike run 1 (≈3 GB headroom at render distance 16). Re-check with heavier settings/shaders when tiers are finalized.
+- **8 GB VRAM with Minecraft:** measured 2026-10-02. Our own footprint is ~4.7–4.9 GB, leaving ~1 GB on a heavy desktop and ~2 GB on a minimal one. Shaders or higher render distance would eat this. Re-check when finalizing tier A and the published requirements.
+- **16 GB system RAM:** llama-server holds ~5 GB of RAM. Measure the reducible part, and check a launcher-like game heap.
 - P2A spike:
-  - Does anything in 26.3 assume the overworld uses the vanilla `minecraft:overworld` dimension type?
-  - generator-subclass codec + registration
+  - Does anything in 26.3 assume the vanilla overworld dimension type or noise settings?
+  - constructor-target `@ModifyArg` in `bake`
   - `createState` filtering
   - `PlacedFeature.place` mixin
-  - `SpawnPlacements.checkSpawnRules` coverage (which paths bypass it)
+  - `SpawnPlacements.checkSpawnRules` coverage
   - custom-spawner list injection
   - portal-ignition block
   - pre-generation time/memory
