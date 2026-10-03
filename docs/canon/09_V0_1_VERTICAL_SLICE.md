@@ -438,6 +438,7 @@ Do not implement during Version 0.1 unless an unforeseen dependency requires par
 - non-AI fallback
 - continuously thinking LLM agents
 - user-facing multi-model routing
+- NPC voice synthesis (text-to-speech; an undecided potential feature, `11` §62)
 
 Importantly, the following **are Version 0.1 requirements**:
 
