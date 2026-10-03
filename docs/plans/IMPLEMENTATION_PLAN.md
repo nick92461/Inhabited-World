@@ -39,6 +39,7 @@
   - `09` Phase 9: measure hitches, active-versus-static play, system RAM, and player latency with background work pending; record evidence.
   - `10` §60 Testing Strategy: experiments are recorded in `docs/notes/` and indexed in `04` §2.14.1.
   - **Follow-up the same day (user directive): the deferral rule is a REQUIREMENT, not a suggestion.** `04` §36 now has an "Architectural requirement" paragraph (inference scheduler; all non-player-waiting inference deferred until idle/static; bounded wait; no backend calls around the scheduler) and "must" wording, and `09` Phase 5 lists the scheduler as a deliverable. Open design item: define "idle/static" concretely (input inactivity threshold, screen types) in P5.
+  - **2026-10-02 (later, user-directed): NPC voice synthesis recorded as an UNDECIDED potential feature** at `11` §62 (placed before §59 so the closing "Long-Term Success Condition" stays last; §62 was the next unused number). `09` §55 non-goals gained one line pointing to it so no agent builds it early. Nothing is scheduled. The plan has no voice work. Leading candidate Kokoro; the open questions to settle first (Java phonemization, espeak-ng GPL against our licensing, expressiveness, voice variety, latency, measured cost) are listed in `11` §62.4.
   - Conflict review: no conflict with `01`. Consistent with `01` §2.2/§2.3, `03` §34, `04` §24 conversation concurrency, and `07` §2.19 (the scheduling rule is scoped to the local single-player path).
 
 **Section references** use the pre-split section numbers, which the canon files retain (see `docs/canon/MIGRATION_MANIFEST.md`). New sections get new unused numbers (`00` §7). File key:
@@ -55,7 +56,7 @@
 | §2.21, §49–53 | `08_TECHNICAL_ARCHITECTURE_AND_PERSISTENCE.md` |
 | §3, §54, §55, §56 | `09_V0_1_VERTICAL_SLICE.md` |
 | §57, §60, §61 | `10_DEVELOPMENT_AND_AGENT_RULES.md` |
-| §45–48, §59 | `11_LONG_TERM_SYSTEMS.md` |
+| §45–48, §62 (undecided: NPC voice), §59 | `11_LONG_TERM_SYSTEMS.md` |
 
 Note: `04` §2.6 is BYOK. The managed-provisioning principle is `01` §2.22, and its details are `04` §2.22.x.
 
