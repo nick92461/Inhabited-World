@@ -161,8 +161,17 @@ Before the rename these were "Minecraft: Inhabited", `inhabited`, `io.github.nic
     - `BaseFireBlock.inPortalDimension(Level)` checks only the level KEY (OVERWORLD/NETHER), so a portal still lights.
     - `NetherPortalBlock.getPortalDestination` returns null without a Nether, so there's no teleport.
     - **Decision:** block ignition in RPG worlds with a mixin on `BaseFireBlock.inPortalDimension` (step 3).
-- **Step 2 (Java; HANDED OFF 2026-09-28, in progress):**
-  - Status: the user has `worldgen/RpgWorlds.java` (compiles) and the noise-settings copy. Still to apply: the two mixins, `inhabited_world.mixins.json`, `InhabitedWorld.java` (identity log line) and the one-line preset change (`settings: inhabited_world:rpg_overworld`). Then run the step 2 test: no warning; `/locate` finds no village or mineshaft; the identity log says `true`; a Default world says `false` and still finds villages.
+- **Step 2 (Java): DONE and user-tested 2026-10-12.**
+  - Files: `worldgen/RpgWorlds.java`, `mixin/ChunkGeneratorMixin.java`, `mixin/WorldDimensionsMixin.java`, `inhabited_world.mixins.json`, `InhabitedWorld.java` (identity log line), `noise_settings/rpg_overworld.json`, and the preset's `settings` line pointing at `inhabited_world:rpg_overworld`.
+  - Evidence from the game log:
+    - identity log `true` at creation and again after re-entry
+    - the Default world logs `false` and saves three dimensions, while an Inhabited World saves only the overworld
+    - no mixin or crash errors
+    - **the user saw no experimental-warning dialog** (not logged, user-reported)
+    - Inhabited World: `minecraft:mineshaft` and `minecraft:village_desert` both "Could not find … nearby". Default world: `village_desert` found 981 blocks away.
+  - **Test-design correction:** `minecraft:village` is NOT a valid structure ID in 26.3 (villages are `village_plains`, `village_desert`, …; use the tag `#minecraft:village`), so my first `/locate` test command only returned "There is no structure with type". `/locate` computes placements from the seed (up to ~1,600 blocks) and needs no loaded chunks.
+  - **Evidence caveat (accepted by the user):** the two comparison worlds used different seeds. The same-seed A/B was offered and declined. The mineshaft result is strong evidence, but not a controlled proof. If a structure ever appears unexpectedly, run the same-seed comparison first.
+  - Original test plan, for reference: no warning; `/locate` finds no village or mineshaft; the identity log says `true`; a Default world says `false` and still finds villages.
   - **Structure allowlist:**
     - `ChunkGeneratorMixin`: `@ModifyArg` on the `ChunkGeneratorStructureState.createForNormal(...)` call inside `ChunkGenerator.createState`, index 4 (the `HolderLookup`). It swaps in `RpgWorlds.allowlisted(lookup)` when `isRpg`.
     - `allowlisted` is a `HolderLookup` view: `listElements` and `get(ResourceKey)` are filtered; tags delegate (4 abstract methods in 26.3).
