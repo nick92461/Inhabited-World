@@ -12,7 +12,9 @@ import net.minecraft.core.HolderSet;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
 import net.minecraft.world.level.levelgen.NoiseGeneratorSettings;
@@ -34,6 +36,14 @@ public final class RpgWorlds {
 
     public static boolean isRpg(ChunkGenerator generator) {
         return generator instanceof NoiseBasedChunkGenerator noise && noise.generatorSettings().is(NOISE_SETTINGS);
+    }
+
+    /**
+     * Whether a level belongs to an Inhabited World. Only the server knows the generator, so a client level
+     * is never one; every rule that uses this runs on the server.
+     */
+    public static boolean isRpg(Level level) {
+        return level instanceof ServerLevel server && isRpg(server.getChunkSource().getGenerator());
     }
 
     /**
