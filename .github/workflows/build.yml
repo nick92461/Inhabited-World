@@ -29,8 +29,19 @@ jobs:
         uses: gradle/actions/setup-gradle@v6
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
-      - name: build
+      # `build` runs `check`, which runs the JUnit unit tests (`test`) and the headless
+      # Fabric game tests (`runGameTest`, a dedicated test server; no display needed).
+      - name: build and test
         run: ./gradlew build
+      - name: capture test reports
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: Test reports
+          path: |
+            inhabited_world_mod/build/reports/
+            inhabited_world_mod/build/test-results/
+          if-no-files-found: ignore
       - name: capture build artifacts
         uses: actions/upload-artifact@v7
         with:
