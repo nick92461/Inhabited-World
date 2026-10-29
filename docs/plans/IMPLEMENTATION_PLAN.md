@@ -41,6 +41,13 @@
   - **Follow-up the same day (user directive): the deferral rule is a REQUIREMENT, not a suggestion.** `04` §36 now has an "Architectural requirement" paragraph (inference scheduler; all non-player-waiting inference deferred until idle/static; bounded wait; no backend calls around the scheduler) and "must" wording, and `09` Phase 5 lists the scheduler as a deliverable. Open design item: define "idle/static" concretely (input inactivity threshold, screen types) in P5.
   - **2026-10-02 (later, user-directed): NPC voice synthesis recorded as an UNDECIDED potential feature** at `11` §62 (placed before §59 so the closing "Long-Term Success Condition" stays last; §62 was the next unused number). `09` §55 non-goals gained one line pointing to it so no agent builds it early. Nothing is scheduled. The plan has no voice work. Leading candidate Kokoro; the open questions to settle first (Java phonemization, espeak-ng GPL against our licensing, expressiveness, voice variety, latency, measured cost) are listed in `11` §62.4.
   - Conflict review: no conflict with `01`. Consistent with `01` §2.2/§2.3, `03` §34, `04` §24 conversation concurrency, and `07` §2.19 (the scheduling rule is scoped to the local single-player path).
+- 2026-10-29: **autonomous build mode** (user-directed: "the sessions will actually build the real mod… you'll be making commits and pushes"). Manual handoff and the push ban are retired.
+  - `10` §57.1 rewritten: main session + build sessions on their own branches/worktrees; the main session reviews, merges and pushes; Git limits (no force-push, no history rewrite, no remote branch deletion without direction); canon approval rule unchanged; a history note records the old rule.
+  - `10` §60: Communication Style now describes reporting finished work (What was built / Why / How to test it / Expected result / Known issues); new "Testing Workflow" subsection (agent-side compile + unit tests + headless game tests; user-side one-click test launch into a fresh test world + per-change test checklist; dev-only conveniences).
+  - `10` header scope line and §61 item 7 reworded to match.
+  - `00`: Status history note; the §4 workflow's last step is now "Claude commits and pushes the approved canon change on its own".
+  - User choices the same day: branch → review → merge (not straight to `main`); one-click test launch (not IntelliJ or agent-launched).
+  - Conflict review: no conflict with `01`; `00` §4–§7 approval gating unchanged.
 
 **Section references** use the pre-split section numbers, which the canon files retain (see `docs/canon/MIGRATION_MANIFEST.md`). New sections get new unused numbers (`00` §7). File key:
 
@@ -62,7 +69,7 @@ Note: `04` §2.6 is BYOK. The managed-provisioning principle is `01` §2.22, and
 
 ---
 
-## Always-on checks (before any design/code handoff)
+## Always-on checks (before briefing or merging any build work)
 
 - v0.1 scope? `09` §55, `10` §60 scope priority, `10` §57 no speculative frameworks.
 - AI involved?
@@ -78,10 +85,11 @@ Note: `04` §2.6 is BYOK. The managed-provisioning principle is `01` §2.22, and
   - semantic IDs
   - everything scoped to the **persisted RPG-world identity** (`02` §4), never to the preset choice
   - outcome before presentation
-- Handoff:
-  - Format per `10` §60 Communication Style. The user types new code.
-  - Claude may make mundane edits to EXISTING files only when the user authorizes that task. **Errors in code the user typed are answered with Before/After snippets for the user to apply.** Claude does not edit those files.
-  - NEVER `git push` (`10` §57.1).
+- Workflow (`10` §57.1, autonomous build mode since 2026-10-29):
+  - Build sessions implement on their own branch/worktree; the main session reviews against canon, merges into `main` and pushes. No force-push or history rewrite.
+  - Before merge: compiles, unit tests, headless game tests where practical (`10` §60 Testing Workflow).
+  - After merge: report per `10` §60 Communication Style, with a test checklist for the one-click test launch.
+  - Build sessions never edit canon; the main session raises canon questions with the user as proposals.
 - Performance/model experiments get an evidence record in `docs/notes/` and an index entry in `04` §2.14.1 (`10` §60).
 
 ## Canon to re-read per phase
@@ -127,8 +135,14 @@ Before the rename these were "Minecraft: Inhabited", `inhabited`, `io.github.nic
 
 **Workspace layout:** `docs/` lives at the `Inhabited World/` workspace root. The mod codebase is the CHILD directory `inhabited_world_mod/`. Never move `docs/` into the codebase. Research records live in `docs/notes/` (e.g. `docs/notes/2026-10-02_llm_stress_tests/`).
 
-**Git (decided by the user 2026-09-25):**
-- One repo at the WORKSPACE ROOT, pushed to GitHub by the user (never by Claude).
+**Build workflow (decided by the user 2026-10-29; `10` §57.1):**
+- **Main session:** the user's point of contact. Reads canon and the plan, picks the next step, briefs one build session per independent step, reviews the diff against canon, merges into `main`, pushes, updates the plan, and gives the user the test checklist.
+- **Build sessions:** fresh sessions, each in its own worktree branch. Default model Opus at high effort for design-heavy or Minecraft-internals work (mixins, worldgen, AI architecture); a cheaper model for mechanical work (data files, renames, test scaffolding). Two build sessions never touch the same files at once. Each brief names the canon sections to read and what done looks like.
+- **Testing:** the user always tests `main` via the one-click test launch (P2A "Dev test tooling" below). Agent-side verification comes first: `gradlew build`, JUnit unit tests, Fabric GameTest headless tests.
+- **Reports** to the user follow `10` §60 Communication Style and lead with the one-line outcome.
+
+**Git (decided by the user 2026-09-25; push rule changed 2026-10-29):**
+- One repo at the WORKSPACE ROOT. Claude pushes `main` to GitHub after review (since 2026-10-29; before that only the user pushed).
 - Canon changes are committed separately from code (`00` §7). Stage docs with `git add docs`, not `git add .`, when unfinished code is in the working tree.
 - The root `.gitattributes` marks `docs/canon/**` as `-text`, so `core.autocrlf=true` can't rewrite canon bytes.
 - **CI:** `.github/workflows/build.yml` at the repo root, with working directory `inhabited_world_mod`, Gradle caching, and artifacts from `inhabited_world_mod/build/libs/`.
@@ -188,7 +202,13 @@ Before the rename these were "Minecraft: Inhabited", `inhabited`, `io.github.nic
     - Our datapack entries are stable: Fabric mod packs carry a `KnownPack`, and `ResourceManagerRegistryLoadTask` rates those `Lifecycle.stable()`.
     - The rejected first attempt mixed into `Complete.lifecycle()`, which the create screen never reads.
   - **Menu placement (user question):** a custom "game mode" button is Phase 10 UI polish (a client mixin on `CreateWorldScreen`). The persisted settings remain the real identity.
-- **Step 3:** feature suppression, spawn hook and portal-ignition block (below).
+- **Dev test tooling (next, before step 3; `10` §60 Testing Workflow):**
+  - **One-click test launch:** a script at the workspace root (plus an optional desktop shortcut) that builds the current `main` checkout and runs the dev client (`runClient`, identity "Dev") straight into a fresh test world: Inhabited World preset, fixed seed, creative, cheats on. A previous test world is replaced or kept by name (decide in the build). The auto-world is dev-only (e.g. gated by a system property set only in the Loom run config) and never reaches the shipped mod.
+  - **Unit tests:** JUnit 5 wired into `gradlew build` for pure-Java logic.
+  - **Headless game tests:** Fabric GameTest (in Fabric API) with a Loom game-test run, so world behaviour (feature absence, refused spawns, unlit portals) is checked without a window. Verify how 26.3 game tests can run in an RPG-world context (identity comes from the noise settings), or test the policy logic directly where the harness can't.
+  - **CI:** `build.yml` runs the unit tests (and game tests if they run headless on CI).
+  - **Done:** the user double-clicks the launcher and lands in an Inhabited World test world; `gradlew build` runs at least one passing unit test and one passing game test.
+- **Step 3:** feature suppression, spawn hook and portal-ignition block (below). Each rule gets a game test where practical, and its test checklist covers `/locate`, natural spawning against `/summon`, and flint and steel on a portal frame, with a Default-world comparison.
 - **Step 4:** pre-generation + boundary (below).
 
 **Feature suppression (`06` §15):**
