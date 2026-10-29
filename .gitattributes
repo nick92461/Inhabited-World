@@ -1,2 +1,4 @@
 # Canon files are hash-verified; never convert their line endings.
 docs/canon/** -text
+# Windows scripts need CRLF line endings.
+*.bat text eol=crlf

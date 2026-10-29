@@ -27,6 +27,47 @@ loom {
 			// keep the same player across launches (canon 08 §51).
 			programArgs "--username", "Dev"
 		}
+
+		// The one-click test launch (test-launch.bat at the workspace root, canon 10 §60 Testing Workflow):
+		// the dev client opens straight into a fresh test world. Only this run sets the property, so the
+		// shipped mod never creates a world on its own. -PtestWorld=default makes a same-seed Default world.
+		testClient {
+			inherit loom.runs.client
+			configName = "Minecraft Client (fresh test world)"
+			property "inhabited_world.dev.testWorld", providers.gradleProperty("testWorld").getOrElse("rpg")
+		}
+	}
+}
+
+// Headless game tests (Fabric GameTest). They live in their own source set and test-only mod
+// (src/gametest/, mod ID inhabited_world_gametest), which never ships. `check` (and so `build`)
+// runs them through the runGameTest task.
+fabricApi {
+	configureTests {
+		createSourceSet = true
+		modId = "inhabited_world_gametest"
+		enableClientGameTests = false
+	}
+}
+
+loom.runs.named("gameTest") {
+	// JUnit-style XML report of the game tests, for CI.
+	property "fabric-api.gametest.report-file", layout.buildDirectory.file("reports/gametest/gametest.xml").get().asFile.absolutePath
+}
+
+// The game-test server builds its world from the minecraft:flat_all_dimensions preset. The test mod
+// replaces that preset with a copy of our shipped rpg_world preset, made at build time so the two can
+// never drift apart: game tests then run inside a real Inhabited World.
+tasks.named("processGametestResources", ProcessResources) {
+	def version = project.version
+	inputs.property "version", version
+	filesMatching("fabric.mod.json") {
+		expand "version": version
+	}
+
+	from("src/main/resources/data/inhabited_world/worldgen/world_preset/rpg_world.json") {
+		into "data/minecraft/worldgen/world_preset"
+		rename { "flat_all_dimensions.json" }
 	}
 }
 
@@ -37,6 +78,13 @@ dependencies {
 
 	// Fabric API. This is technically optional, but you probably want it anyway.
 	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	// Unit tests: JUnit 5 run inside Fabric Loader, so Minecraft classes and our mixins are available.
+	testImplementation "net.fabricmc:fabric-loader-junit:${project.loader_version}"
+}
+
+test {
+	useJUnitPlatform()
 }
 
 processResources {
