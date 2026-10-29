@@ -3,8 +3,10 @@
 	"package": "io.github.nick92461.inhabitedworld.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"mixins": [
+		"BaseFireBlockMixin",
 		"ChunkGeneratorMixin",
 		"FeaturePlacerMixin",
+		"ServerLevelMixin",
 		"SpawnPlacementsMixin",
 		"WorldDimensionsMixin"
 	],
