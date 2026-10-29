@@ -136,7 +136,7 @@ Before the rename these were "Minecraft: Inhabited", `inhabited`, `io.github.nic
 **Workspace layout:** `docs/` lives at the `Inhabited World/` workspace root. The mod codebase is the CHILD directory `inhabited_world_mod/`. Never move `docs/` into the codebase. Research records live in `docs/notes/` (e.g. `docs/notes/2026-10-02_llm_stress_tests/`).
 
 **Build workflow (decided by the user 2026-10-29; `10` §57.1):**
-- **Main session:** the user's point of contact. Reads canon and the plan, picks the next step, briefs one build session per independent step, reviews the diff against canon, merges into `main`, pushes, updates the plan, and gives the user the test checklist.
+- **Main session:** the user's point of contact. Reads canon and the plan, picks the next step, briefs one build session per independent step, reviews the diff against canon, merges into `main`, pushes, updates the plan, and gives the user the test checklist. **It never implements build work itself, even a one-line change** (user correction 2026-10-29): every code or data change goes to a fresh build session.
 - **Build sessions:** fresh sessions, each in its own worktree branch. Default model Opus at high effort for design-heavy or Minecraft-internals work (mixins, worldgen, AI architecture); a cheaper model for mechanical work (data files, renames, test scaffolding). Two build sessions never touch the same files at once. Each brief names the canon sections to read and what done looks like.
 - **Testing:** the user always tests `main` via the one-click test launch (P2A "Dev test tooling" below). Agent-side verification comes first: `gradlew build`, JUnit unit tests, Fabric GameTest headless tests.
 - **Reports** to the user follow `10` §60 Communication Style and lead with the one-line outcome.
@@ -419,7 +419,7 @@ The criteria should be revised to frame-pacing terms after the scheduling run.
   - Revisit after v0.1 through the manual backend path, benchmarked first.
 - OS keychain dependency when BYOK is built (`04` §2.11 vs `08` §52). Future only.
 - Desert-well suppression is Claude's implementation call under `06` §15; the user may keep them.
-- **Undecided (step 3 audit): `pale_oak_creaking_checked`.** These pale-garden trees carry creaking hearts that spawn creakings at night, a generated hostile source outside the planner. Suppressing them is one tag line; it's a player-visible call for the user. Fossils, geodes, sculk and sulfur features are kept as terrain.
+- **Decided 2026-10-29 (user): creaking-heart pale oaks (`pale_oak_creaking_checked`) are suppressed** (e0a475c, merged 297b211). They are a generated hostile source outside the planner. Pale gardens place them through a random selector, so a suppressed pick places nothing: about 10% of pale-garden tree attempts leave a gap. A game test checks the nested path by outcome, with a plain pale oak as the control. Fossils, geodes, sculk and sulfur features are kept as terrain.
 - Pass criteria to be rewritten in frame-pacing terms (hitch rate in active versus static play) after the scheduling experiment.
 
 ## Risks to verify
