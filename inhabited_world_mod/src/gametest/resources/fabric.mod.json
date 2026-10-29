@@ -8,9 +8,13 @@
 	"environment": "*",
 	"entrypoints": {
 		"fabric-gametest": [
-			"io.github.nick92461.inhabitedworld.gametest.RpgWorldGameTests"
+			"io.github.nick92461.inhabitedworld.gametest.RpgWorldGameTests",
+			"io.github.nick92461.inhabitedworld.gametest.WorldContentGameTests"
 		]
 	},
+	"mixins": [
+		"inhabited_world_gametest.mixins.json"
+	],
 	"depends": {
 		"inhabited_world": "*",
 		"fabric-gametest-api-v1": "*"
