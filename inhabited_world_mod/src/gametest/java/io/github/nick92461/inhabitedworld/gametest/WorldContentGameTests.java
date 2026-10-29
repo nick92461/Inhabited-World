@@ -53,7 +53,9 @@ import net.minecraft.world.phys.Vec3;
  */
 public class WorldContentGameTests {
     private static final Set<ResourceKey<PlacedFeature>> EXPECTED_SUPPRESSED = Set.of(
-            placedFeature("monster_room"), placedFeature("monster_room_deep"), placedFeature("desert_well"));
+            placedFeature("monster_room"), placedFeature("monster_room_deep"), placedFeature("desert_well"),
+            // Pale oaks with a creaking heart: a generated hostile source outside the planner (user decision 2026-10-29).
+            placedFeature("pale_oak_creaking_checked"));
 
     private static final List<EntityType<?>> EXPECTED_PROHIBITED = List.of(
             EntityTypes.VILLAGER, EntityTypes.WANDERING_TRADER, EntityTypes.ZOMBIE_VILLAGER, EntityTypes.WITCH,
@@ -72,13 +74,51 @@ public class WorldContentGameTests {
     // ---- Feature suppression (canon 06 section 15) ----
 
     @GameTest
-    public void suppressedFeaturesAreDungeonsAndDesertWells(GameTestHelper helper) {
+    public void suppressedFeaturesAreTheDenylist(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
         HolderSet<PlacedFeature> suppressed = FeatureSuppression.forGenerator(level.getChunkSource().getGenerator(), level.registryAccess());
         Set<ResourceKey<PlacedFeature>> keys = suppressed.stream().map(holder -> holder.unwrapKey().orElseThrow()).collect(Collectors.toSet());
 
         helper.assertTrue(keys.equals(EXPECTED_SUPPRESSED), "suppressed placed features should be " + EXPECTED_SUPPRESSED + " but are " + keys);
         helper.succeed();
+    }
+
+    /*
+      Creaking-heart pale oaks are never decorated directly: pale_garden_vegetation (a random selector) places them
+      through PlacedFeature.place, so that nested entry point must be stopped too. Their only placement modifier
+      draws no random, so this test proves it by outcome instead: on two identical prepared sites a plain pale oak
+      grows (the control: the site is valid) while the creaking-heart one does not.
+     */
+    @GameTest(maxTicks = 100)
+    public void nestedSuppressedFeatureNeverPlaces(GameTestHelper helper) {
+        ServerLevel level = helper.getLevel();
+        Registry<PlacedFeature> registry = level.registryAccess().lookupOrThrow(Registries.PLACED_FEATURE);
+
+        BlockPos controlSite = prepareTreeSite(helper, 6);
+        boolean controlPlaced = registry.getValueOrThrow(placedFeature("pale_oak_checked"))
+                .place(level, level.getChunkSource().getGenerator(), RandomSource.create(42L), controlSite);
+        helper.assertTrue(controlPlaced, "control: a plain pale oak must grow on the prepared site");
+
+        BlockPos testSite = prepareTreeSite(helper, 20);
+        boolean placed = registry.getValueOrThrow(placedFeature("pale_oak_creaking_checked"))
+                .place(level, level.getChunkSource().getGenerator(), RandomSource.create(42L), testSite);
+        helper.assertFalse(placed, "a creaking-heart pale oak must not place in an Inhabited World");
+        helper.assertBlockNotPresent(Blocks.PALE_OAK_LOG, helper.relativePos(testSite));
+        helper.succeed();
+    }
+
+    // A grass floor with open air above, big enough for a 2x2 pale oak; returns the sapling position.
+    private static BlockPos prepareTreeSite(GameTestHelper helper, int originX) {
+        int originZ = 6;
+        for (int x = originX - 5; x <= originX + 6; x++) {
+            for (int z = originZ - 5; z <= originZ + 6; z++) {
+                helper.setBlock(x, 0, z, Blocks.GRASS_BLOCK);
+                for (int y = 1; y <= 16; y++) {
+                    helper.setBlock(x, y, z, Blocks.AIR);
+                }
+            }
+        }
+        return helper.absolutePos(new BlockPos(originX, 1, originZ));
     }
 
     /*
