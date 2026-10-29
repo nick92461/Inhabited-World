@@ -216,6 +216,12 @@ Before the rename these were "Minecraft: Inhabited", `inhabited`, `io.github.nic
     - Unverified: the window itself (verified through logs and `level.dat`), and whether seed 20261029's spawn point is a pleasant spot.
     - A desktop shortcut can be added on the user's OK (outside the repo).
 - **Step 3:** feature suppression, spawn hook and portal-ignition block (below). Each rule gets a game test where practical, and its test checklist covers `/locate`, natural spawning against `/summon`, and flint and steel on a portal frame, with a Default-world comparison.
+  - **BUILT and merged 2026-10-29 (c2182c6; 15 unit + 14 game tests pass; both test launches clean; awaiting the user's in-game look).** A negative control (new mixins removed) made 6 game tests fail, including a vanilla dungeon spawner at y −16.
+    - **Correction to the plan below:** in 26.3, chunk decoration calls `FeaturePlacer.placeWithBiomeCheck` directly, so a `PlacedFeature.place` hook would miss almost everything. `FeaturePlacerMixin` hooks `FeaturePlacer`'s private `place(PlacedFeature, RandomSource, BlockPos, boolean)` (both paths meet there). The denylist is the placed-feature tag `inhabited_world:suppressed_in_rpg_world`, matched by identity against registry instances and looked up once per placer.
+    - Spawn: `SpawnPlacementsMixin` (`@ModifyReturnValue`) → `spawn/SpawnGovernance` → plain-Java `spawn/SpawnPolicy`. The entity tag `inhabited_world:prohibited_human_like` covers villager, wandering trader, zombie villager, witch and `#minecraft:illager`. Spawn reasons are classified AUTOMATIC (refused), DELIBERATE (command, egg, dispenser, bucket) or DERIVED (breeding, conversion, load, dimension travel), with an exhaustive switch so a new reason breaks the build. Refusals log at DEBUG under `inhabited_world/spawn`. The dev-only `/inhabited spawnpolicy <entity> [reason]` reports the decision.
+    - `ServerLevelMixin` drops `WanderingTraderSpawner` and `VillageSiege` (the list is built in `MinecraftServer.createLevels`). `BaseFireBlockMixin`: fire still lights in a frame, but no portal forms. `RpgWorlds.isRpg(Level)` is server-only.
+    - **Bypass paths:** patrols and raids are off via dimension attributes; structure-placed mobs are off with structures. **P3: our own structure templates must not contain vanilla villagers, or we hook template entity placement.** Spawners with custom spawn rules skip the check, but can only come from suppressed or disabled sources or a player. Conversions need an existing pseudo-human.
+    - Decisions made in the build: ravagers are not in the tag (not human-like; raids are off); `SPAWNER` counts as automatic (a villager egg in a spawner is refused, `/summon` works); End portals can still be assembled in creative but lead nowhere.
 - **Step 4:** pre-generation + boundary (below).
 
 **Feature suppression (`06` §15):**
@@ -413,6 +419,7 @@ The criteria should be revised to frame-pacing terms after the scheduling run.
   - Revisit after v0.1 through the manual backend path, benchmarked first.
 - OS keychain dependency when BYOK is built (`04` §2.11 vs `08` §52). Future only.
 - Desert-well suppression is Claude's implementation call under `06` §15; the user may keep them.
+- **Undecided (step 3 audit): `pale_oak_creaking_checked`.** These pale-garden trees carry creaking hearts that spawn creakings at night, a generated hostile source outside the planner. Suppressing them is one tag line; it's a player-visible call for the user. Fossils, geodes, sculk and sulfur features are kept as terrain.
 - Pass criteria to be rewritten in frame-pacing terms (hitch rate in active versus static play) after the scheduling experiment.
 
 ## Risks to verify
@@ -422,10 +429,10 @@ The criteria should be revised to frame-pacing terms after the scheduling run.
   - Does anything in 26.3 assume the vanilla overworld dimension type or noise settings?
   - constructor-target `@ModifyArg` in `bake`
   - `createState` filtering
-  - `PlacedFeature.place` mixin
-  - `SpawnPlacements.checkSpawnRules` coverage
-  - custom-spawner list injection
-  - portal-ignition block
+  - ~~`PlacedFeature.place` mixin~~ → `FeaturePlacer.place` (verified 2026-10-29)
+  - ~~`SpawnPlacements.checkSpawnRules` coverage~~ (bypass paths audited 2026-10-29, see Step 3)
+  - ~~custom-spawner list injection~~ (verified 2026-10-29)
+  - ~~portal-ignition block~~ (verified 2026-10-29)
   - pre-generation time/memory
   - ocean-boundary approach
 - Distribution: CurseForge confirmation of automatic runtime download (fallback: guided path).
