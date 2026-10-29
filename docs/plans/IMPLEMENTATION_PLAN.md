@@ -208,6 +208,13 @@ Before the rename these were "Minecraft: Inhabited", `inhabited`, `io.github.nic
   - **Headless game tests:** Fabric GameTest (in Fabric API) with a Loom game-test run, so world behaviour (feature absence, refused spawns, unlit portals) is checked without a window. Verify how 26.3 game tests can run in an RPG-world context (identity comes from the noise settings), or test the policy logic directly where the harness can't.
   - **CI:** `build.yml` runs the unit tests (and game tests if they run headless on CI).
   - **Done:** the user double-clicks the launcher and lands in an Inhabited World test world; `gradlew build` runs at least one passing unit test and one passing game test.
+  - **BUILT and merged 2026-10-29 (445ea9b; agent-verified, awaiting the user's in-game look):**
+    - `test-launch.bat` at the workspace root finds Java 25 itself and runs `gradlew runTestClient`. It recreates "Inhabited Test" (seed 20261029, creative, cheats) on each launch; `test-launch.bat default` makes a same-seed "Default Test" for comparisons. It pauses with a message on failure.
+    - Dev-only gate: the `testClient` Loom run sets `inhabited_world.dev.testWorld`, and `client/dev/DevTestWorld` also requires `isDevelopmentEnvironment()`. It creates the world via `WorldOpenFlows.createFreshLevel` from the title or accessibility-onboarding screen.
+    - Unit tests: JUnit 5 via `fabric-loader-junit` (`RpgWorldsTest`). Game tests: the `gametest` source set and test-only mod `inhabited_world_gametest` (never shipped), run by `runGameTest` inside `check`/`build`. CI uploads the test reports.
+    - **Finding for step 3: game tests run inside a real Inhabited World.** The 26.3 game-test server builds its world from `minecraft:flat_all_dimensions`; the test mod overrides that preset with a build-time copy of `rpg_world`, so the overworld keeps key `minecraft:overworld` with our dimension type and noise settings and `isRpg` is true. Consequences: features, spawn rules and portal ignition can be tested in-world; Default-world comparisons test the policy logic directly with `isRpg` false; structures are off in game-test worlds, so structure tests check the generator's structure list.
+    - Unverified: the window itself (verified through logs and `level.dat`), and whether seed 20261029's spawn point is a pleasant spot.
+    - A desktop shortcut can be added on the user's OK (outside the repo).
 - **Step 3:** feature suppression, spawn hook and portal-ignition block (below). Each rule gets a game test where practical, and its test checklist covers `/locate`, natural spawning against `/summon`, and flint and steel on a portal frame, with a Default-world comparison.
 - **Step 4:** pre-generation + boundary (below).
 
