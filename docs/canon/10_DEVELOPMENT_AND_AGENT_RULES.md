@@ -2,7 +2,7 @@
 
 **Status:** Canonical Tier 4 development-governance specification  
 **Authority:** Subordinate to project-design canon for game-design meaning; authoritative for coding-agent workflow  
-**Scope:** Development philosophy, manual handoff rules, Git restrictions, implementation discipline, diagnostics, testing, and required behavior for new coding agents.
+**Scope:** Development philosophy, agent operating mode, Git workflow, implementation discipline, diagnostics, testing, and required behavior for new coding agents.
 
 The numbered sections below retain their identities from the pre-split canonical charter for lossless migration and auditability.
 
@@ -66,47 +66,42 @@ A future requirement should influence current architecture when ignoring it now 
 
 ## 57.1 Coding-Agent Operating Rules
 
-The coding agent operates in **manual handoff mode by default**.
+Coding agents operate in **autonomous build mode**. Claude coding sessions write, build, test, and commit the mod's code and files directly. The user does not type code.
+
+The work is organized as:
+
+- **The main session** is the user's point of contact. It maintains the canon (under `00` §4–§7) and the implementation plan, picks the next step from the plan, briefs build sessions, reviews their work against canon, merges it, and pushes it.
+- **Build sessions** each implement one briefed step on their own Git branch in a separate worktree, never directly on `main`.
 
 Normal workflow:
 
-1. Inspect current code.
-2. Explain intended change.
-3. Provide exact code/files/patches/commands.
-4. User manually applies them.
-5. User runs/tests.
-6. User reports results.
-7. Continue.
+1. The main session reads canon and the plan, and briefs a build session for one step.
+2. The build session inspects the current code and implements the step on its branch.
+3. The build session verifies its work (§60 Testing Strategy) and commits it on its branch.
+4. The main session reviews the diff against canon and the plan, merges it into `main`, and pushes `main` to GitHub.
+5. The user tests the merged change in-game using the test launch and the change's test checklist (§60 Testing Workflow).
+6. The user reports results and directs what comes next. Fixes go back through the same flow.
 
-The coding agent must not directly modify the project unless explicitly authorized for that specific task.
+Git:
 
-Permission to:
+- Claude may commit, merge, and push to the project's GitHub repository.
+- `main` must build and pass its automated tests at every push.
+- Never force-push, rewrite published history, or delete remote branches without the user's explicit direction.
+- Canon changes are committed separately from code (`00` §7).
 
-- inspect
-- analyze
-- review
-- search
-- suggest
+Limits that remain:
 
-does not imply permission to modify.
+- Canon changes only with the user's explicit approval (`00` §4–§7). Build sessions never edit canon. They report conflicts and canon questions to the main session, which raises them with the user as Canon Proposals.
+- Authority to build covers this repository. Changes outside it (the user's system configuration, the local inference setup, other projects) and destructive or irreversible actions need the user's explicit approval for that specific action.
+- Design decisions that canon leaves open and that materially change the player experience are surfaced to the user rather than silently decided.
 
-One authorized edit does not grant permanent edit authority.
+Responsibility split:
 
-The agent may suggest Git commands.
+**Claude:** inspect, reason, design, build, test, commit, review, merge, push.
 
-However:
+**User:** direct, decide, approve canon, test in-game, evaluate.
 
-> **The coding agent is NEVER permitted to execute `git push`.**
-
-This prohibition is absolute.
-
-Only the user publishes repository changes remotely.
-
-Preferred responsibility split:
-
-**Coding agent:** inspect, reason, design, explain, provide code.
-
-**User:** apply, run, evaluate, publish.
+History: from project start until 2026-10-29 this section required manual handoff mode (the agent provided exact code, and the user typed, ran, and published it), and it absolutely prohibited the agent from running `git push`. On 2026-10-29 the user replaced that rule with autonomous build mode. The earlier wording is preserved in Git history.
 
 ---
 
@@ -321,6 +316,21 @@ Favor automated testing for deterministic logic including:
 
 Do not over-test trivial Minecraft wiring.
 
+### Testing Workflow
+
+Before a change is merged, its build session verifies it without the user:
+
+- the project compiles and builds
+- automated unit tests cover its deterministic logic (the list above)
+- in-world behavior that code can check (for example, that a suppressed feature or structure is absent, that a prohibited spawn is refused, or that a portal does not light) is covered by automated headless game tests where practical
+
+The user then sees what was built in the real game:
+
+- A **one-click test launch** builds the current `main` and starts the development client directly in a fresh test world: the RPG world type, a fixed seed, creative mode, and cheats enabled, with the pinned development identity (`08` §51).
+- Each merged change comes with a short **test checklist**: what to look at, commands to run, the expected result, and a Default-world comparison where useful.
+
+Test conveniences (automatic test worlds, debug commands, development launch options) exist only in development runs and never alter the shipped consumer experience.
+
 Performance, hardware and model-selection experiments are recorded under `docs/notes/` with the named configuration, raw data, method and interpretation, and indexed in `04` §2.14.1. Conclusions that change design go through the canon change process (`00` §4–§7); the record preserves the evidence they rest on.
 
 ## Backend Neutrality
@@ -335,19 +345,17 @@ It should not require rewriting NPC cognition.
 
 ## Communication Style
 
-When handing off implementation work, prefer:
+When reporting finished implementation work to the user, prefer:
 
-**What we're doing**
+**What was built**
 
 **Why**
 
-**Change**
-
-**Run**
+**How to test it** (the test launch and what to look at)
 
 **Expected result**
 
-**If it fails**
+**Known issues**
 
 If implementation discoveries conflict materially with this charter, explicitly flag them.
 
@@ -379,7 +387,7 @@ Instead:
 
 6. Identify the first implementation milestone.
 
-7. Guide the user through that milestone in manual handoff mode.
+7. Carry out that milestone under the operating mode in §57.1.
 
 The first milestone should establish a clean, runnable mod foundation and nothing more unless additional work is genuinely necessary to validate a foundational assumption.
 

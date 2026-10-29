@@ -14,6 +14,8 @@ History: from 2026-09-25 to 2026-09-28, ChatGPT was the user-designated generato
 
 Also on 2026-09-28, the user retitled the project from "Minecraft: Inhabited" to **Inhabited World**, and the workspace directory from `Minecraft Inhabited/` to `Inhabited World/`. Historical material (`MIGRATION_MANIFEST.md` and `_archive/`) intentionally keeps the old title.
 
+On 2026-10-29 the user moved development from manual handoff to autonomous build mode (`10` §57.1): Claude sessions build, test, commit, merge, and push the code, and the user directs, tests in-game, and approves canon. The canon approval rule in this document is unchanged.
+
 The canonical corpus is stored at the **workspace level**, not inside the mod codebase. All relative paths in this document are rooted at the `Inhabited World/` workspace directory. The eventual mod codebase is a child of that workspace and remains subordinate to the workspace-level canon.
 
 Conceptually:
@@ -167,7 +169,7 @@ Claude applies exactly the approved changes losslessly (Section 7)
         ↓
 Claude records the change in the implementation plan's canon change log
         ↓
-User commits the canon change
+Claude commits and pushes the approved canon change on its own
 ```
 
 Claude is encouraged to identify:
