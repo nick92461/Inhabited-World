@@ -419,7 +419,13 @@ The criteria should be revised to frame-pacing terms after the scheduling run.
   - Revisit after v0.1 through the manual backend path, benchmarked first.
 - OS keychain dependency when BYOK is built (`04` §2.11 vs `08` §52). Future only.
 - Desert-well suppression is Claude's implementation call under `06` §15; the user may keep them.
-- **Decided 2026-10-29 (user): creaking-heart pale oaks (`pale_oak_creaking_checked`) are suppressed** (e0a475c, merged 297b211). They are a generated hostile source outside the planner. Pale gardens place them through a random selector, so a suppressed pick places nothing: about 10% of pale-garden tree attempts leave a gap. A game test checks the nested path by outcome, with a plain pale oak as the control. Fossils, geodes, sculk and sulfur features are kept as terrain.
+- **Decided 2026-10-29 (user): creaking-heart trees generate, but generated hearts stay dormant.** First the trees were fully suppressed (e0a475c / 297b211), which left ~10% gaps in pale gardens. The user then chose: keep the tree and its heart, never spawn a creaking from a **natural** heart in an Inhabited World, and let a **player-placed** heart work like vanilla.
+  - Built and merged 2026-10-30 (c0df367, 7e46ad6).
+  - The heart spawns through `SpawnUtil.trySpawnMob` (reason `SPAWNER`), which skips `checkSpawnRules`. So `CreakingHeartBlockEntityMixin` (HEAD of `spawnProtector`, returning vanilla's own "no spot" null) asks `SpawnGovernance.allowsCreakingHeart` → `SpawnPolicy.decideCreakingHeart(rpgWorld, naturalHeart)`.
+  - The `natural` block-state property is reliable: tree generation sets it, a placed heart is always `natural=false`, and silk touch and pick-block don't copy it. Only `/setblock` or a `/give` block-state component can make a natural heart.
+  - Game tests: the tree grows with a natural heart; a natural heart stays empty at night with a survival player nearby; a placed heart spawns a creaking. The negative control (mixin off) fails only the natural-heart test.
+  - Side effects: natural hearts still look awake at night (particles and sound); breaking one still gives XP and resin; a silk-touched natural heart that is re-placed works like vanilla.
+  - Fossils, geodes, sculk and sulfur features are kept as terrain.
 - Pass criteria to be rewritten in frame-pacing terms (hitch rate in active versus static play) after the scheduling experiment.
 
 ## Risks to verify
