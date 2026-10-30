@@ -21,6 +21,14 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.monster.creaking.Creaking;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.CreakingHeartBlock;
+import net.minecraft.world.level.block.entity.CreakingHeartBlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.CreakingHeartState;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.EntitySpawnReason;
@@ -47,15 +55,14 @@ import net.minecraft.world.phys.Vec3;
 
 /*
   P2A step 3 in a real Inhabited World (the game-test overworld is one, see RpgWorldGameTests): no uncontrolled
-  dungeons or desert wells, no vanilla pseudo-humans from the game's own spawning, no trader or siege spawners,
-  and no lit nether portals. Default-world behaviour is covered by the unit tests (SpawnPolicyTest and friends),
+  dungeons or desert wells, no vanilla pseudo-humans from the game's own spawning, no creakings from generated
+  creaking hearts, no trader or siege spawners, and no lit nether portals. Default-world behaviour is covered by the unit tests (SpawnPolicyTest and friends),
   since a game-test run has only this one overworld.
  */
 public class WorldContentGameTests {
+    // Creaking-heart pale oaks are not here: they grow, and their hearts stay dormant instead (user decision 2026-10-29).
     private static final Set<ResourceKey<PlacedFeature>> EXPECTED_SUPPRESSED = Set.of(
-            placedFeature("monster_room"), placedFeature("monster_room_deep"), placedFeature("desert_well"),
-            // Pale oaks with a creaking heart: a generated hostile source outside the planner (user decision 2026-10-29).
-            placedFeature("pale_oak_creaking_checked"));
+            placedFeature("monster_room"), placedFeature("monster_room_deep"), placedFeature("desert_well"));
 
     private static final List<EntityType<?>> EXPECTED_PROHIBITED = List.of(
             EntityTypes.VILLAGER, EntityTypes.WANDERING_TRADER, EntityTypes.ZOMBIE_VILLAGER, EntityTypes.WITCH,
@@ -84,27 +91,43 @@ public class WorldContentGameTests {
     }
 
     /*
-      Creaking-heart pale oaks are never decorated directly: pale_garden_vegetation (a random selector) places them
-      through PlacedFeature.place, so that nested entry point must be stopped too. Their only placement modifier
-      draws no random, so this test proves it by outcome instead: on two identical prepared sites a plain pale oak
-      grows (the control: the site is valid) while the creaking-heart one does not.
+      Creaking-heart pale oaks grow again (user decision 2026-10-29). They are never decorated directly:
+      pale_garden_vegetation (a random selector) places them through PlacedFeature.place, the nested entry point,
+      so this also proves the suppression hook leaves allowed nested placements alone. The heart decorator only
+      uses a log with logs on all six sides, so not every tree gets a heart: seeds are tried until one does.
+      The tree site reaches past the 8x8 test area, so the padding keeps it off neighbouring tests.
      */
-    @GameTest(maxTicks = 100)
-    public void nestedSuppressedFeatureNeverPlaces(GameTestHelper helper) {
+    @GameTest(maxTicks = 100, padding = 10)
+    public void creakingHeartPaleOakGrowsWithANaturalHeart(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
-        Registry<PlacedFeature> registry = level.registryAccess().lookupOrThrow(Registries.PLACED_FEATURE);
+        PlacedFeature creakingOak = level.registryAccess().lookupOrThrow(Registries.PLACED_FEATURE)
+                .getValueOrThrow(placedFeature("pale_oak_creaking_checked"));
 
-        BlockPos controlSite = prepareTreeSite(helper, 6);
-        boolean controlPlaced = registry.getValueOrThrow(placedFeature("pale_oak_checked"))
-                .place(level, level.getChunkSource().getGenerator(), RandomSource.create(42L), controlSite);
-        helper.assertTrue(controlPlaced, "control: a plain pale oak must grow on the prepared site");
+        for (long seed = 0; seed < 32; seed++) {
+            BlockPos site = prepareTreeSite(helper, 6);
+            boolean placed = creakingOak.place(level, level.getChunkSource().getGenerator(), RandomSource.create(seed), site);
+            helper.assertTrue(placed, "a creaking-heart pale oak must grow in an Inhabited World (seed " + seed + ")");
+            helper.assertTrue(level.getBlockState(site).is(Blocks.PALE_OAK_LOG), "the tree's trunk must stand on the site (seed " + seed + ")");
 
-        BlockPos testSite = prepareTreeSite(helper, 20);
-        boolean placed = registry.getValueOrThrow(placedFeature("pale_oak_creaking_checked"))
-                .place(level, level.getChunkSource().getGenerator(), RandomSource.create(42L), testSite);
-        helper.assertFalse(placed, "a creaking-heart pale oak must not place in an Inhabited World");
-        helper.assertBlockNotPresent(Blocks.PALE_OAK_LOG, helper.relativePos(testSite));
-        helper.succeed();
+            BlockPos heart = findBlock(helper, Blocks.CREAKING_HEART, site);
+            if (heart != null) {
+                BlockState state = level.getBlockState(heart);
+                helper.assertTrue(state.getValue(CreakingHeartBlock.NATURAL), "a generated heart must be natural=true");
+                helper.succeed();
+                return;
+            }
+        }
+        helper.fail("none of 32 creaking-heart pale oaks got a heart");
+    }
+
+    // The first matching block within a tree site (absolute), or null.
+    private static BlockPos findBlock(GameTestHelper helper, Block block, BlockPos sapling) {
+        for (BlockPos pos : BlockPos.betweenClosed(sapling.offset(-5, 0, -5), sapling.offset(6, 15, 6))) {
+            if (helper.getLevel().getBlockState(pos).is(block)) {
+                return pos.immutable();
+            }
+        }
+        return null;
     }
 
     // A grass floor with open air above, big enough for a 2x2 pale oak; returns the sapling position.
@@ -138,6 +161,14 @@ public class WorldContentGameTests {
             boolean placed = new FeaturePlacer(level, level.getChunkSource().getGenerator()).placeWithBiomeCheck(feature, random, chunkOrigin);
             helper.assertFalse(placed, key.identifier() + " must not place in an Inhabited World");
             helper.assertTrue(random.nextLong() == RandomSource.create(42L).nextLong(), key.identifier() + " must be stopped before it runs");
+        }
+
+        // The nested entry point (PlacedFeature.place, used by random selectors and weighted lists) is stopped too.
+        for (ResourceKey<PlacedFeature> key : EXPECTED_SUPPRESSED) {
+            RandomSource random = RandomSource.create(42L);
+            boolean placed = registry.getValueOrThrow(key).place(level, level.getChunkSource().getGenerator(), random, chunkOrigin);
+            helper.assertFalse(placed, key.identifier() + " must not place through PlacedFeature.place either");
+            helper.assertTrue(random.nextLong() == RandomSource.create(42L).nextLong(), key.identifier() + " must be stopped before it runs (nested)");
         }
 
         PlacedFeature control = registry.getValueOrThrow(placedFeature("ore_coal_upper"));
@@ -256,6 +287,93 @@ public class WorldContentGameTests {
             helper.assertEntityPresent(EntityTypes.VILLAGER);
             helper.assertEntityPresent(EntityTypes.WANDERING_TRADER);
         });
+    }
+
+    // ---- Creaking hearts (canon 06 section 15, user decision 2026-10-29) ----
+
+    // Middle of the night on the overworld clock: creaking_active is true from 12600 to 23401.
+    private static final long NIGHT = 18000L;
+    private static final BlockPos HEART = new BlockPos(4, 2, 4);
+
+    /*
+      A valid creaking-heart setup, the same for a generated and a player-placed heart: night, a pale oak log above
+      and below the heart's spot, a survival player 4 blocks away, and a flat stone floor with open air covering the
+      heart's whole spawn range (16 blocks around it), so every spawn attempt has somewhere to land. The tests pad
+      their area so the floor stays clear of neighbouring tests. Returns the player.
+      makeMockServerPlayerInLevel is marked for removal in 26.3, but it is the only helper that puts a player in
+      the level, which the heart needs to find (Level.getNearestPlayer).
+     */
+    @SuppressWarnings("removal")
+    private static ServerPlayer heartSite(GameTestHelper helper) {
+        helper.setTime(NIGHT);
+        for (int x = HEART.getX() - 16; x <= HEART.getX() + 16; x++) {
+            for (int z = HEART.getZ() - 16; z <= HEART.getZ() + 16; z++) {
+                helper.setBlock(x, 0, z, Blocks.STONE);
+                for (int y = 1; y <= 10; y++) {
+                    helper.setBlock(x, y, z, Blocks.AIR);
+                }
+            }
+        }
+        helper.setBlock(HEART.below(), Blocks.PALE_OAK_LOG);
+        helper.setBlock(HEART.above(), Blocks.PALE_OAK_LOG);
+
+        ServerPlayer player = helper.makeMockServerPlayerInLevel();
+        player.setGameMode(GameType.SURVIVAL);
+        BlockPos stand = helper.absolutePos(HEART.offset(4, -1, 0));
+        player.teleportTo(stand.getX() + 0.5, stand.getY(), stand.getZ() + 0.5);
+        return player;
+    }
+
+    private static CreakingHeartBlockEntity heartAt(GameTestHelper helper) {
+        if (helper.getLevel().getBlockEntity(helper.absolutePos(HEART)) instanceof CreakingHeartBlockEntity heart) {
+            return heart;
+        }
+        throw helper.assertionException("no creaking heart at " + HEART.toShortString());
+    }
+
+    // Whether a creaking near the heart belongs to it (creakings from other tests never count).
+    private static boolean hasCreaking(GameTestHelper helper, CreakingHeartBlockEntity heart) {
+        AABB range = new AABB(heart.getBlockPos()).inflate(24);
+        return !helper.getLevel().getEntitiesOfClass(Creaking.class, range, heart::isProtector).isEmpty();
+    }
+
+    /*
+      A generated heart (natural=true) wakes at night like in vanilla but never summons its creaking. The heart
+      updates every 20 to 24 ticks with 5 spawn attempts each, so 160 ticks give it about 35 chances; the placed
+      heart below, on the same site, spawns on its first.
+     */
+    @GameTest(maxTicks = 200, padding = 16)
+    public void naturalCreakingHeartNeverSpawnsACreaking(GameTestHelper helper) {
+        heartSite(helper);
+        // Exactly what tree generation places (CreakingHeartDecorator): dormant and natural. An uprooted heart
+        // would never tick, so it must not start uprooted.
+        helper.setBlock(HEART, Blocks.CREAKING_HEART.defaultBlockState()
+                .setValue(CreakingHeartBlock.STATE, CreakingHeartState.DORMANT)
+                .setValue(CreakingHeartBlock.NATURAL, true));
+
+        helper.runAtTickTime(160, () -> {
+            BlockState state = helper.getBlockState(HEART);
+            helper.assertTrue(state.getValue(CreakingHeartBlock.NATURAL), "the heart must still be natural");
+            helper.assertTrue(state.getValue(CreakingHeartBlock.STATE) == CreakingHeartState.AWAKE,
+                    "control: the heart must be awake (night, logs in place), but is " + state.getValue(CreakingHeartBlock.STATE)
+                            + " with " + helper.getBlockState(HEART.above()) + " above and " + helper.getBlockState(HEART.below()) + " below");
+            helper.assertFalse(hasCreaking(helper, heartAt(helper)), "a generated creaking heart must not spawn a creaking in an Inhabited World");
+            helper.succeed();
+        });
+    }
+
+    // A heart a player places (natural=false) works exactly like vanilla: it summons its creaking at night.
+    @GameTest(maxTicks = 200, padding = 16)
+    public void placedCreakingHeartSpawnsACreaking(GameTestHelper helper) {
+        ServerPlayer player = heartSite(helper);
+        player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.CREAKING_HEART));
+        BlockPos log = helper.absolutePos(HEART.below());
+        // Placing on top of the lower log (clicked face UP) makes the heart's axis vertical, as a player would.
+        helper.useBlock(HEART.below(), player, new BlockHitResult(Vec3.atCenterOf(log).add(0, 0.5, 0), Direction.UP, log, false));
+        helper.assertBlockPresent(Blocks.CREAKING_HEART, HEART);
+        helper.assertFalse(helper.getBlockState(HEART).getValue(CreakingHeartBlock.NATURAL), "a player-placed heart must be natural=false");
+
+        helper.succeedWhen(() -> helper.assertTrue(hasCreaking(helper, heartAt(helper)), "a player-placed creaking heart should spawn its creaking at night"));
     }
 
     // ---- Custom spawners ----
