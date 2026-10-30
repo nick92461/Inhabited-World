@@ -10,6 +10,8 @@ import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.level.block.CreakingHeartBlock;
+import net.minecraft.world.level.block.state.BlockState;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +41,26 @@ public final class SpawnGovernance {
             LOGGER.debug("refused {} ({}) at {}: {}", EntityType.getKey(type), reason, pos.toShortString(), decision.explanation());
         }
         return false;
+    }
+
+    /**
+     * Whether a creaking heart may summon its creaking (see CreakingHeartBlockEntityMixin). Called at most once
+     * per heart update (every 20 to 24 ticks) while an awake heart without a creaking has a player nearby.
+     */
+    public static boolean allowsCreakingHeart(ServerLevel level, BlockPos pos, BlockState heart) {
+        SpawnPolicy.Decision decision = decideCreakingHeart(level, heart);
+        if (decision.allowed()) {
+            return true;
+        }
+        if (LOGGER.isDebugEnabled()) {
+            LOGGER.debug("refused minecraft:creaking from the creaking heart at {}: {}", pos.toShortString(), decision.explanation());
+        }
+        return false;
+    }
+
+    public static SpawnPolicy.Decision decideCreakingHeart(ServerLevel level, BlockState heart) {
+        return SpawnPolicy.decideCreakingHeart(RpgWorlds.isRpg(level),
+                heart.hasProperty(CreakingHeartBlock.NATURAL) && heart.getValue(CreakingHeartBlock.NATURAL));
     }
 
     public static SpawnPolicy.Decision decide(EntityType<?> type, ServerLevel level, EntitySpawnReason reason) {

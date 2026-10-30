@@ -21,6 +21,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.EntitySpawnReason;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.SpawnPlacements;
 
 /*
@@ -28,6 +29,8 @@ import net.minecraft.world.entity.SpawnPlacements;
   entity type and spawn reason at the caller's position, and why.
 
     /inhabited spawnpolicy <entity> [<reason>]      reason defaults to natural
+
+  For minecraft:creaking it also reports the creaking-heart rule (generated hearts stay dormant, placed ones work).
 
   Registered only in development runs (10 section 60: test conveniences never reach the shipped game).
   P2B adds the semantic region and the POI or settlement that supplied the rule.
@@ -77,9 +80,21 @@ public final class SpawnPolicyCommand {
                 + (decision.allowed() ? "ALLOWED" : "REFUSED") + " - " + decision.explanation() + "\n"
                 + "  prohibited human-like (tag " + SpawnGovernance.PROHIBITED_HUMAN_LIKE.location() + "): " + yesNo(prohibited) + "\n"
                 + "  full spawn check at this spot (vanilla rules, then ours): " + (fullCheck ? "passes" : "fails") + "\n"
+                + creakingHeartLines(type, rpg)
                 + "  semantic region: none yet (regions arrive in Phase 2B)";
         source.sendSuccess(() -> Component.literal(text), false);
         return decision.allowed() ? 1 : 0;
+    }
+
+    // Hearts summon their creaking outside the spawn check above, so their rule is reported on its own.
+    private static String creakingHeartLines(EntityType<?> type, boolean rpg) {
+        if (type != EntityTypes.CREAKING) {
+            return "";
+        }
+        SpawnPolicy.Decision natural = SpawnPolicy.decideCreakingHeart(rpg, true);
+        SpawnPolicy.Decision placed = SpawnPolicy.decideCreakingHeart(rpg, false);
+        return "  from a generated creaking heart (natural=true): " + (natural.allowed() ? "ALLOWED" : "REFUSED") + " - " + natural.explanation() + "\n"
+                + "  from a placed creaking heart (natural=false): " + (placed.allowed() ? "ALLOWED" : "REFUSED") + " - " + placed.explanation() + "\n";
     }
 
     private static String yesNo(boolean value) {

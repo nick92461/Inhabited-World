@@ -21,7 +21,9 @@ public final class SpawnPolicy {
     public enum Decision {
         ALLOW(true, "no rule refuses it"),
         REFUSE_PROHIBITED_HUMAN_LIKE(false,
-                "vanilla human-like mobs never spawn on their own in an Inhabited World (canon 06 section 13)");
+                "vanilla human-like mobs never spawn on their own in an Inhabited World (canon 06 section 13)"),
+        REFUSE_NATURAL_CREAKING_HEART(false,
+                "a generated creaking heart never spawns a creaking in an Inhabited World; a placed one does (canon 06 section 15, user decision 2026-10-29)");
 
         private final boolean allowed;
         private final String explanation;
@@ -64,6 +66,22 @@ public final class SpawnPolicy {
     public static Decision decide(boolean rpgWorld, boolean prohibitedHumanLike, EntitySpawnReason reason) {
         if (rpgWorld && prohibitedHumanLike && origin(reason) == Origin.AUTOMATIC) {
             return Decision.REFUSE_PROHIBITED_HUMAN_LIKE;
+        }
+        return Decision.ALLOW;
+    }
+
+    /**
+     * A creaking heart summoning its creaking. Vanilla does this itself (reason SPAWNER) outside
+     * SpawnPlacements.checkSpawnRules, so it gets its own rule: a heart that world generation placed is a hostile
+     * source outside the planner and stays dormant, while a heart a player crafted and placed is a deliberate
+     * choice and works as in vanilla.
+     *
+     * @param rpgWorld     whether the level is an Inhabited World
+     * @param naturalHeart whether the heart was generated (its block-state property natural=true)
+     */
+    public static Decision decideCreakingHeart(boolean rpgWorld, boolean naturalHeart) {
+        if (rpgWorld && naturalHeart) {
+            return Decision.REFUSE_NATURAL_CREAKING_HEART;
         }
         return Decision.ALLOW;
     }
