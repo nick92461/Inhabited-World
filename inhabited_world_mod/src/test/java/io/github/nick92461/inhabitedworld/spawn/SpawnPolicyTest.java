@@ -71,6 +71,25 @@ class SpawnPolicyTest {
         }
     }
 
+    // Creaking hearts (user decision 2026-10-29): generated ones stay dormant in an Inhabited World, placed ones work.
+    @Test
+    void inhabitedWorldRefusesOnlyNaturalCreakingHearts() {
+        assertEquals(Decision.REFUSE_NATURAL_CREAKING_HEART, SpawnPolicy.decideCreakingHeart(true, true));
+        assertEquals(Decision.ALLOW, SpawnPolicy.decideCreakingHeart(true, false));
+    }
+
+    @Test
+    void defaultWorldCreakingHeartsAreVanilla() {
+        assertEquals(Decision.ALLOW, SpawnPolicy.decideCreakingHeart(false, true));
+        assertEquals(Decision.ALLOW, SpawnPolicy.decideCreakingHeart(false, false));
+    }
+
+    @Test
+    void creakingHeartRefusalExplainsItself() {
+        assertFalse(Decision.REFUSE_NATURAL_CREAKING_HEART.allowed());
+        assertTrue(Decision.REFUSE_NATURAL_CREAKING_HEART.explanation().contains("06 section 15"));
+    }
+
     @Test
     void refusalExplainsItself() {
         assertFalse(Decision.REFUSE_PROHIBITED_HUMAN_LIKE.allowed());

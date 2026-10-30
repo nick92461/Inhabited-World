@@ -5,6 +5,7 @@
 	"mixins": [
 		"BaseFireBlockMixin",
 		"ChunkGeneratorMixin",
+		"CreakingHeartBlockEntityMixin",
 		"FeaturePlacerMixin",
 		"ServerLevelMixin",
 		"SpawnPlacementsMixin",
