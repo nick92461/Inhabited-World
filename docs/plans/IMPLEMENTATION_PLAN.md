@@ -223,6 +223,27 @@ Before the rename these were "Minecraft: Inhabited", `inhabited`, `io.github.nic
     - **Bypass paths:** patrols and raids are off via dimension attributes; structure-placed mobs are off with structures. **P3: our own structure templates must not contain vanilla villagers, or we hook template entity placement.** Spawners with custom spawn rules skip the check, but can only come from suppressed or disabled sources or a player. Conversions need an existing pseudo-human.
     - Decisions made in the build: ravagers are not in the tag (not human-like; raids are off); `SPAWNER` counts as automatic (a villager egg in a spawner is refused, `/summon` works); End portals can still be assembled in creative but lead nowhere.
 - **Step 4:** pre-generation + boundary (below).
+  - **Half built 2026-10-31, PAUSED for the user's coast choices** (branch `claude/p2a-step4-4fd987`, commit 6a6996d; not merged, because the border cuts through normal terrain until the coast exists).
+  - **Built:**
+    - The first WorldPlan piece (data version, permanent world ID, playable area 1024×1024 centred on 0,0) is made once at creation; Default and older worlds get none.
+    - The world border is set from the plan.
+    - Pre-generation runs in bands of 4 chunk rows during level preparation, through vanilla's `LevelLoadListener`, so the normal loading screen shows progress. It resumes if interrupted.
+    - Game tests now start from a fresh world, with 5 new tests and a negative control.
+  - **Measured (Ryzen 5 5600):**
+    - 4,096 chunks in about 22 s headless, 27 s in the client; heap peak 0.9–1.5 GB; about 50 MB on disk.
+    - An ocean chunk costs about 85% of a land chunk in 26.3, so "cheap" ocean saves little. Plain ocean, no further optimisation.
+  - **Coast approach:** shape continentalness in a new versioned noise-settings ID `rpg_overworld_v2` (the identity check accepts both), using vanilla density-function types only.
+  - **Open user choices:**
+    - island shape: A round, B rounded square, C rounded square with low ground raised (recommended), D coast pushed out
+    - whether to pre-generate a ~12-chunk ocean ring (+~20 s)
+    - confirm 1024×1024 centred on 0,0
+    - 400-seed survey: 26% of vanilla seeds leave the middle under half land
+  - The prototype maps and generator are in the session's hand-over notes.
+- **Step 5 (planner, closes P2A):**
+  - site selection for the town and the external POI from deterministic noise sampling before generation (`02` §6–§8)
+  - the rest of the WorldPlan: POI placements and bounds, and a spawn marker if useful
+  - verification after pre-generation that both required sites exist
+  - The town's footprint comes from the imported build (below), so the planner needs at least its bounding box. Placeholder bounds are fine until the build is ready.
 
 **Feature suppression (`06` §15):**
 - A tiny mixin on `PlacedFeature.place(WorldGenLevel, ChunkGenerator, RandomSource, BlockPos)`: if `isRpg(generator)` and the placed feature is in the denylist, return false.
@@ -268,6 +289,29 @@ Sites are chosen from deterministic noise sampling before generation. After pre-
 - Immutable facts live in the WorldPlan; mutable POI and encounter state get their own store.
 - "Who knows about it" is answered by knowledge queries. These are the same queries `04` §29.1 knowledge gating uses.
 - The v0.1 POI is handcrafted.
+
+### Imported builds: the town's source (added 2026-10-31, user request)
+The user has downloaded worlds containing builds (a city) to use as the handcrafted town (`02` §9: "the identity of a place is handcrafted; its incarnation within a particular world is procedural"; `09` Phase 3: handcrafted town and POI, semantic markers). This is the content route for the Phase 3 town. No canon change is needed.
+
+**Schedule:**
+- **Track B1, the build import tool: can start now, in parallel with P2A.** It depends on nothing in the world generator.
+  - A dev-only tool opens a downloaded world (upgraded to 26.3 by opening it once in 26.3 first).
+  - The user marks the build plus the natural terrain to keep: a box, plus an editable keep/drop mask for surrounding terrain.
+  - It exports that to our own structure templates, split into tiles because templates have practical size limits, together with a manifest: footprint, bounds, anchor/rotation origin, and the terrain-mask edge.
+  - Named semantic markers (`02` §16) can be added in the manifest (smithy, inn, gates, beds).
+  - Output lives in the mod's data under a versioned ID (`02` §6 versioning applies once shipped).
+- **P2A step 5** (planner) reads the build's footprint to choose a site that fits.
+- **Phase 3:**
+  - Placement in generated worlds: the town placed through the structure system at the planner's site, and generated terrain blended up to the kept-terrain mask edge (beardifier/terrain adaptation; expect tuning).
+  - Markers resolved to world positions and persisted.
+
+**Open (needs the user):**
+- each build's size in blocks
+- its Minecraft version
+- where the downloads are on disk
+- whether the builds are the user's own or need the creators' permission (matters if the mod is ever distributed)
+
+**Scope flag:** `09` §3 asks for "one small handcrafted town" with ~6–10 NPCs on a ~1024×1024 map. A large city may need trimming for v0.1, or a canon proposal to enlarge the town. The island shape must also hold its footprint on every seed, which favours coast option C.
 
 ### NPCs (`03` §18–19)
 The record is the person and holds a logical location (a semantic location ID). Bodies are reconciled against records, never saved as truth. Reputation is per player UUID.
