@@ -53,6 +53,18 @@ fabricApi {
 loom.runs.named("gameTest") {
 	// JUnit-style XML report of the game tests, for CI.
 	property "fabric-api.gametest.report-file", layout.buildDirectory.file("reports/gametest/gametest.xml").get().asFile.absolutePath
+	// Each run creates a fresh Inhabited World, which pre-generates its whole map before the tests start. Game tests
+	// pre-generate only the middle 6 x 6 chunks so builds stay quick; -PpregenChunkRadius=32 runs the full map.
+	property "inhabited_world.dev.pregenChunkRadius", providers.gradleProperty("pregenChunkRadius").getOrElse("3")
+}
+
+// Every game-test run starts from a freshly created world, as a player's new world would: world creation is what
+// makes the WorldPlan and pre-generates the map, and no test may read chunks left over from an earlier build.
+def gameTestWorld = layout.buildDirectory.dir("run/gameTest/world")
+tasks.named("runGameTest") {
+	doFirst {
+		gameTestWorld.get().asFile.deleteDir()
+	}
 }
 
 // The game-test server builds its world from the minecraft:flat_all_dimensions preset. The test mod

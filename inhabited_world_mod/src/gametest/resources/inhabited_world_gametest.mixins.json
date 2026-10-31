@@ -3,7 +3,8 @@
 	"package": "io.github.nick92461.inhabitedworld.gametest.mixin",
 	"compatibilityLevel": "JAVA_25",
 	"mixins": [
-		"CustomSpawnersAccessor"
+		"CustomSpawnersAccessor",
+		"GameTestServerMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

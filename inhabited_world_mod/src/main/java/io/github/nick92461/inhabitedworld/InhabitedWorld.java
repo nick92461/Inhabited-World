@@ -2,6 +2,7 @@ package io.github.nick92461.inhabitedworld;
 
 import io.github.nick92461.inhabitedworld.spawn.SpawnPolicyCommand;
 import io.github.nick92461.inhabitedworld.worldgen.RpgWorlds;
+import io.github.nick92461.inhabitedworld.worldgen.pregen.Pregeneration;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -22,6 +23,7 @@ public class InhabitedWorld implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		LOGGER.info("[{}] foundation initialized", MOD_ID);
+		Pregeneration.init();
 
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
 			for (ServerLevel level : server.getAllLevels()) {
