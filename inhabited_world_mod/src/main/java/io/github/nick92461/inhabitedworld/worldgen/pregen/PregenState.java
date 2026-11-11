@@ -5,7 +5,6 @@ import com.mojang.serialization.DataResult;
 import com.mojang.serialization.codecs.RecordCodecBuilder;
 
 import io.github.nick92461.inhabitedworld.InhabitedWorld;
-import io.github.nick92461.inhabitedworld.worldgen.PlayableArea;
 
 import net.minecraft.util.datafix.DataFixTypes;
 import net.minecraft.world.level.saveddata.SavedData;
@@ -14,18 +13,17 @@ import net.minecraft.world.level.saveddata.SavedDataType;
 /*
   How far pre-generation has come, saved with the overworld (dimensions/minecraft/overworld/data/inhabited_world/
   pregeneration.dat). If the game closes while the world is still being built, the next opening carries on from
-  the first unfinished band; chunks already on disk just load. The area and band size are saved too, so a resumed
-  run walks exactly the same schedule.
+  the first unfinished band; chunks already on disk just load. The schedule itself is saved too, so a resumed run
+  walks exactly the same chunks in the same order.
  */
 public final class PregenState extends SavedData {
     public static final int DATA_VERSION = 1;
 
     private static final Codec<PregenState> CODEC = RecordCodecBuilder.<PregenState>create(i -> i.group(
                     Codec.INT.fieldOf("data_version").forGetter(state -> DATA_VERSION),
-                    PlayableArea.CODEC.fieldOf("area").forGetter(state -> state.schedule.area()),
-                    Codec.INT.fieldOf("band_rows").forGetter(state -> state.schedule.bandRows()),
+                    PregenSchedule.CODEC.fieldOf("schedule").forGetter(state -> state.schedule),
                     Codec.INT.fieldOf("next_band").forGetter(state -> state.nextBand))
-            .apply(i, (version, area, bandRows, nextBand) -> new PregenState(version, new PregenSchedule(area, bandRows), nextBand)))
+            .apply(i, PregenState::new))
             .validate(state -> state.dataVersion == DATA_VERSION
                     ? DataResult.success(state)
                     : DataResult.error(() -> "unsupported pre-generation data version " + state.dataVersion));

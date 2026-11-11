@@ -101,12 +101,4 @@ public record PlayableArea(int centerX, int centerZ, int size) {
     public boolean containsChunk(int chunkX, int chunkZ) {
         return chunkX >= this.minChunkX() && chunkX <= this.maxChunkX() && chunkZ >= this.minChunkZ() && chunkZ <= this.maxChunkZ();
     }
-
-    /**
-     * A smaller area with the same centre, at most {@code chunkRadius} chunks out from the centre on each side
-     * (so 2 x chunkRadius chunks per side). Used only to shorten development test runs.
-     */
-    public PlayableArea shrunkTo(int chunkRadius) {
-        return new PlayableArea(this.centerX, this.centerZ, Math.min(this.size, chunkRadius * 32));
-    }
 }

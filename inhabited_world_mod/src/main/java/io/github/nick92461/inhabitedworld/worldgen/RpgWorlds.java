@@ -1,5 +1,6 @@
 package io.github.nick92461.inhabitedworld.worldgen;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -25,8 +26,19 @@ import net.minecraft.world.level.levelgen.structure.StructureSet;
   The settings entry is saved with the world, so the identity survives every reload.
  */
 public final class RpgWorlds {
+    /** The first version (P2A steps 1 to 3): vanilla terrain, no island. Worlds created with it keep it. */
     public static final ResourceKey<NoiseGeneratorSettings> NOISE_SETTINGS =
             ResourceKey.create(Registries.NOISE_SETTINGS, InhabitedWorld.id("rpg_overworld"));
+
+    /** The current version (P2A step 4): the island in its ocean. New worlds use it (the rpg_world preset). */
+    public static final ResourceKey<NoiseGeneratorSettings> NOISE_SETTINGS_V2 =
+            ResourceKey.create(Registries.NOISE_SETTINGS, InhabitedWorld.id("rpg_overworld_v2"));
+
+    /*
+      Shipped world-generation configurations are never edited in place (canon 02 section 6): a change gets a new
+      versioned ID, and every version stays an Inhabited World so existing worlds keep their rules.
+     */
+    private static final List<ResourceKey<NoiseGeneratorSettings>> ALL_VERSIONS = List.of(NOISE_SETTINGS, NOISE_SETTINGS_V2);
 
     // Structure sets allowed to generate in an Inhabited world.
     private static final Set<Identifier> ALLOWED_STRUCTURE_SETS = Set.of();
@@ -35,7 +47,14 @@ public final class RpgWorlds {
     }
 
     public static boolean isRpg(ChunkGenerator generator) {
-        return generator instanceof NoiseBasedChunkGenerator noise && noise.generatorSettings().is(NOISE_SETTINGS);
+        if (generator instanceof NoiseBasedChunkGenerator noise) {
+            for (ResourceKey<NoiseGeneratorSettings> version : ALL_VERSIONS) {
+                if (noise.generatorSettings().is(version)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     /**

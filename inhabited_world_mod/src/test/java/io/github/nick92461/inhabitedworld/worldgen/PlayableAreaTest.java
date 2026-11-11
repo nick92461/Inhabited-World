@@ -59,16 +59,6 @@ class PlayableAreaTest {
     }
 
     @Test
-    void shrinkingKeepsTheCentre() {
-        PlayableArea small = this.map.shrunkTo(3);
-        assertEquals(96, small.size());
-        assertEquals(-3, small.minChunkX());
-        assertEquals(2, small.maxChunkX());
-        assertEquals(36, small.chunkCount());
-        assertEquals(this.map, this.map.shrunkTo(100), "never grows past the area itself");
-    }
-
-    @Test
     void codecRoundTripsAndValidates() {
         var json = PlayableArea.CODEC.encodeStart(JsonOps.INSTANCE, this.map).getOrThrow();
         assertEquals(this.map, PlayableArea.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow());

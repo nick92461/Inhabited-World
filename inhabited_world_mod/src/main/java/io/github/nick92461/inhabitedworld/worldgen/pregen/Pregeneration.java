@@ -40,6 +40,10 @@ import org.jspecify.annotations.Nullable;
   player connection (canon 08 section 2.21): in single-player it drives the loading screen's progress bar and chunk
   map, and on a dedicated server it is logged as "Preparing spawn area: N%".
 
+  What is generated: the playable area plus a ring of ocean beyond the world border, as wide as the default view
+  distance, so a player standing at the border sees only finished chunks and play never generates any (user
+  decision 2026-11-11).
+
   Work proceeds band by band (PregenSchedule). The next band's tickets are added before the previous band's are
   removed, so the chunks they share stay loaded, and everything else unloads (and is saved) as it goes.
  */
@@ -47,8 +51,11 @@ public final class Pregeneration {
     /** Rows of chunks per band: 4 rows of a 64-chunk-wide map is 256 chunks, plenty for every worker thread. */
     public static final int BAND_ROWS = 4;
 
-    /** Development only: pre-generate just this many chunks out from the centre (shortens test runs). */
-    public static final String DEV_RADIUS_PROPERTY = "inhabited_world.dev.pregenChunkRadius";
+    /** Chunks of ocean pre-generated beyond the world border on every side: vanilla's default view distance. */
+    public static final int OCEAN_RING_CHUNKS = 12;
+
+    /** Development only: pre-generate just this many chunk rows from the north edge (shortens test runs). */
+    public static final String DEV_ROWS_PROPERTY = "inhabited_world.dev.pregenRows";
 
     // Loads chunks to full status; never saved with the world (a resumed run adds its own again).
     public static final TicketType TICKET = Registry.register(BuiltInRegistries.TICKET_TYPE, InhabitedWorld.id("pregeneration"),
@@ -86,7 +93,7 @@ public final class Pregeneration {
         ServerLevel overworld = server.overworld();
         PregenState state = overworld.getDataStorage().get(PregenState.TYPE);
         if (state == null) {
-            state = PregenState.start(new PregenSchedule(targetArea(plan.playableArea()), BAND_ROWS));
+            state = PregenState.start(target(plan.playableArea()));
             overworld.getDataStorage().set(PregenState.TYPE, state);
         }
         if (state.isComplete()) {
@@ -97,14 +104,20 @@ public final class Pregeneration {
         return true;
     }
 
-    private static PlayableArea targetArea(PlayableArea playable) {
-        String radius = System.getProperty(DEV_RADIUS_PROPERTY);
-        if (radius == null || !FabricLoader.getInstance().isDevelopmentEnvironment()) {
-            return playable;
+    /** Everything a world pre-generates: its playable area and the ocean ring around it. */
+    public static PregenSchedule fullSchedule(PlayableArea playable) {
+        return PregenSchedule.covering(playable, OCEAN_RING_CHUNKS, BAND_ROWS);
+    }
+
+    private static PregenSchedule target(PlayableArea playable) {
+        PregenSchedule full = fullSchedule(playable);
+        String rows = System.getProperty(DEV_ROWS_PROPERTY);
+        if (rows == null || rows.equals("all") || !FabricLoader.getInstance().isDevelopmentEnvironment()) {
+            return full;
         }
-        PlayableArea limited = playable.shrunkTo(Integer.parseInt(radius));
-        InhabitedWorld.LOGGER.warn("[{}] development run: pre-generating only {} of {} chunks", InhabitedWorld.MOD_ID,
-                limited.chunkCount(), playable.chunkCount());
+        PregenSchedule limited = full.firstRows(Integer.parseInt(rows));
+        InhabitedWorld.LOGGER.warn("[{}] development run: pre-generating only the first {} rows ({} of {} chunks)", InhabitedWorld.MOD_ID,
+                limited.rows(), limited.totalChunks(), full.totalChunks());
         return limited;
     }
 
@@ -118,7 +131,7 @@ public final class Pregeneration {
         int peakLoaded = 0;
         int firstBand = state.nextBand();
 
-        InhabitedWorld.LOGGER.info("[{}] pre-generating the playable area: {} chunks in {} bands (starting at band {})",
+        InhabitedWorld.LOGGER.info("[{}] pre-generating the map and its ocean ring: {} chunks in {} bands (starting at band {})",
                 InhabitedWorld.MOD_ID, total, schedule.bandCount(), firstBand);
         listener.start(LevelLoadListener.Stage.LOAD_INITIAL_CHUNKS, total);
         listener.update(LevelLoadListener.Stage.LOAD_INITIAL_CHUNKS, schedule.chunksBefore(firstBand), total);

@@ -14,16 +14,20 @@ import net.fabricmc.fabric.api.gametest.v1.GameTest;
 import net.minecraft.core.BlockPos;
 import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.server.level.ChunkLevel;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.FluidTags;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.border.WorldBorder;
+import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.level.chunk.LevelChunk;
 import net.minecraft.world.level.chunk.status.ChunkStatus;
 import net.minecraft.world.level.chunk.storage.SerializableChunkData;
 
 /*
   P2A step 4 in a real Inhabited World created by this game-test run: the WorldPlan made at creation, the world
-  border it sets, and pre-generation. The test run pre-generates only the middle of the map (build.gradle sets
-  inhabited_world.dev.pregenChunkRadius), so these tests check that smaller area; the full map runs the same code.
+  border it sets, and pre-generation. The test run pre-generates only a northern strip of the map and its ocean
+  ring (build.gradle sets inhabited_world.dev.pregenRows); the full run uses the same code.
  */
 public class FiniteWorldGameTests {
     private static WorldPlan plan(GameTestHelper helper) {
@@ -78,46 +82,62 @@ public class FiniteWorldGameTests {
         helper.succeed();
     }
 
-    @GameTest(maxTicks = 200)
-    public void preGenerationFinishedBeforeTheWorldOpened(GameTestHelper helper) {
+    /*
+      Pre-generation covers the map and a 12-chunk ocean ring beyond the border (user decision 2026-11-11). This run
+      only does the northern strip (build.gradle), which holds 12 rows of ring and 2 rows of the map: every chunk of
+      it is saved at full status before the world opens, the ring chunks are open sea, and nothing past the ring was
+      generated to full status (the negative control: chunks past the ring are not full, or not there at all).
+     */
+    @GameTest(maxTicks = 400)
+    public void preGenerationCoversTheMapAndOceanRing(GameTestHelper helper) {
         ServerLevel level = helper.getLevel();
+        PlayableArea area = plan(helper).playableArea();
         PregenState state = level.getDataStorage().get(PregenState.TYPE);
         helper.assertTrue(state != null, "pre-generation state must be saved with the overworld");
         helper.assertTrue(state.isComplete(), "pre-generation must be complete before the world opens");
 
-        Pregeneration.Result result = Pregeneration.lastResult();
+        PregenSchedule full = Pregeneration.fullSchedule(area);
+        helper.assertTrue(full.minChunkX() == area.minChunkX() - 12 && full.maxChunkZ() == area.maxChunkZ() + 12,
+                "the full schedule reaches 12 chunks past the border, but is " + full);
+        String rows = System.getProperty(Pregeneration.DEV_ROWS_PROPERTY);
+        PregenSchedule expected = rows == null || rows.equals("all") ? full : full.firstRows(Integer.parseInt(rows));
         PregenSchedule schedule = state.schedule();
+        helper.assertTrue(schedule.equals(expected), "this world pre-generated " + schedule + ", expected " + expected);
+
+        Pregeneration.Result result = Pregeneration.lastResult();
         helper.assertTrue(result != null && result.finished(), "this server must have run pre-generation to the end");
         helper.assertTrue(result.chunks() == schedule.totalChunks(), "it generated " + result.chunks() + " of " + schedule.totalChunks() + " chunks");
-        helper.assertTrue(plan(helper).playableArea().contains(schedule.area().minBlockX(), schedule.area().minBlockZ())
-                && plan(helper).playableArea().contains(schedule.area().maxBlockX(), schedule.area().maxBlockZ()),
-                "the pre-generated area lies inside the playable area");
 
-        // Every scheduled chunk is at full status: saved, or (the last band, until it unloads) still in memory. The
-        // first band was unloaded and saved as pre-generation went on. Negative control: a chunk far outside the
-        // scheduled area, which nothing has asked for, has no saved data at all.
+        int ring = 0;
+        int map = 0;
         for (int band = 0; band < schedule.bandCount(); band++) {
             for (ChunkPos pos : schedule.band(band)) {
-                ChunkStatus status = status(level, pos);
-                helper.assertTrue(status == ChunkStatus.FULL, "pre-generated chunk " + pos + " should be at full status, but is " + status);
+                ChunkStatus status = savedStatus(level, pos);
+                helper.assertTrue(status == ChunkStatus.FULL, "pre-generated chunk " + pos + " should be saved at full status, but is " + status);
+                if (area.containsChunk(pos.x(), pos.z())) {
+                    map++;
+                } else if (ring++ % 3 == 0) {
+                    assertOpenSea(helper, level.getChunk(pos.x(), pos.z()));
+                }
             }
         }
-        for (ChunkPos pos : schedule.band(0)) {
-            helper.assertTrue(savedStatus(level, pos) == ChunkStatus.FULL, "first-band chunk " + pos + " should already be saved at full status");
-        }
-        ChunkPos untouched = new ChunkPos(schedule.area().maxChunkX() + 20, schedule.area().minChunkZ());
-        helper.assertTrue(level.getChunkSource().chunkMap.read(untouched).join().isEmpty(), "control: chunk " + untouched + " was never generated");
+        helper.assertTrue(ring > 0 && map > 0, "the run must cover both ring and map chunks (ring " + ring + ", map " + map + ")");
+
+        // Just past the ring, chunks are only partly generated: vanilla needs neighbours around every full chunk.
+        // Beyond those neighbours nothing was generated at all.
+        ChunkPos pastRing = new ChunkPos(area.minChunkX() - 13, area.minChunkZ());
+        helper.assertTrue(savedStatus(level, pastRing) != ChunkStatus.FULL, "control: chunk " + pastRing + ", 13 chunks past the border, is not full");
+        ChunkPos farBeyond = new ChunkPos(area.minChunkX() - 13 - ChunkLevel.RADIUS_AROUND_FULL_CHUNK, area.minChunkZ());
+        helper.assertTrue(savedStatus(level, farBeyond) == null, "control: chunk " + farBeyond + " was never generated");
         helper.succeed();
     }
 
-    /*
-      FULL if the chunk is full on disk or in memory. Neither alone is enough: the last band may not be saved yet,
-      and a saved full chunk that something reloads at a lower level (the tests near it) shows a lower status in memory.
-     */
-    private static ChunkStatus status(ServerLevel level, ChunkPos pos) {
-        ChunkStatus saved = savedStatus(level, pos);
-        ChunkStatus loaded = level.getChunkSource().chunkMap.getLatestStatus(pos.pack());
-        return saved == ChunkStatus.FULL || loaded == ChunkStatus.FULL ? ChunkStatus.FULL : (saved != null ? saved : loaded);
+    // Open sea: the floor at the chunk's centre lies below sea level, and the block at sea level is water.
+    private static void assertOpenSea(GameTestHelper helper, LevelChunk chunk) {
+        int floor = chunk.getHeight(Heightmap.Types.OCEAN_FLOOR, 8, 8);
+        BlockPos sea = chunk.getPos().getWorldPosition().offset(8, 62, 8);
+        helper.assertTrue(floor < 62, "ring chunk " + chunk.getPos() + " should be sea, but its floor is at " + floor);
+        helper.assertTrue(chunk.getFluidState(sea).is(FluidTags.WATER), "ring chunk " + chunk.getPos() + " should hold water at sea level");
     }
 
     // The status a chunk has on disk (or in the write queue), or null if it was never saved.

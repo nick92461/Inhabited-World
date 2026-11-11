@@ -47,14 +47,19 @@ class RpgWorldsTest {
         return new NoiseBasedChunkGenerator(new FixedBiomeSource(plains), reference(settings));
     }
 
+    // Both shipped versions are Inhabited Worlds (canon 02 section 6): v1 worlds keep their rules after v2 arrives.
     @Test
     void ourNoiseSettingsMakeAnRpgWorld() {
-        assertTrue(RpgWorlds.isRpg(generatorWith(RpgWorlds.NOISE_SETTINGS)));
+        assertTrue(RpgWorlds.isRpg(generatorWith(RpgWorlds.NOISE_SETTINGS)), "v1 (rpg_overworld)");
+        assertTrue(RpgWorlds.isRpg(generatorWith(RpgWorlds.NOISE_SETTINGS_V2)), "v2 (rpg_overworld_v2)");
     }
 
     @Test
     void vanillaNoiseSettingsDoNot() {
         assertFalse(RpgWorlds.isRpg(generatorWith(NoiseGeneratorSettings.OVERWORLD)));
+        assertFalse(RpgWorlds.isRpg(generatorWith(NoiseGeneratorSettings.AMPLIFIED)));
+        assertFalse(RpgWorlds.isRpg(generatorWith(ResourceKey.create(Registries.NOISE_SETTINGS, Identifier.fromNamespaceAndPath("inhabited_world", "rpg_overworld_v3")))),
+                "an unshipped version is not one");
     }
 
     private static final ResourceKey<StructureSet> VILLAGES =
