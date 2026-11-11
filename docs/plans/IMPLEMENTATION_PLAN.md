@@ -233,11 +233,12 @@ Before the rename these were "Minecraft: Inhabited", `inhabited`, `io.github.nic
     - 4,096 chunks in about 22 s headless, 27 s in the client; heap peak 0.9–1.5 GB; about 50 MB on disk.
     - An ocean chunk costs about 85% of a land chunk in 26.3, so "cheap" ocean saves little. Plain ocean, no further optimisation.
   - **Coast approach:** shape continentalness in a new versioned noise-settings ID `rpg_overworld_v2` (the identity check accepts both), using vanilla density-function types only.
-  - **Open user choices:**
-    - island shape: A round, B rounded square, C rounded square with low ground raised (recommended), D coast pushed out
-    - whether to pre-generate a ~12-chunk ocean ring (+~20 s)
-    - confirm 1024×1024 centred on 0,0
-    - 400-seed survey: 26% of vanilla seeds leave the middle under half land
+  - **Decided 2026-11-11 (user: "use recommendations"):**
+    - coast option C: a rounded-square island with low ground inside raised to low land (fixes ocean-heavy seeds; the 400-seed survey found 26% of vanilla seeds leave the middle under half land)
+    - pre-generate a ~12-chunk ocean ring past the border (+~20 s at creation)
+    - 1024×1024 centred on 0,0, spawn near the centre
+    - vanilla loading screen for now
+    - The step 4 session is finishing it on its branch.
   - The prototype maps and generator are in the session's hand-over notes.
 - **Step 5 (planner, closes P2A):**
   - site selection for the town and the external POI from deterministic noise sampling before generation (`02` §6–§8)
