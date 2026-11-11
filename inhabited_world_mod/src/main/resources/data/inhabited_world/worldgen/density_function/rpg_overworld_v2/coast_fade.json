@@ -1,0 +1,14 @@
+{
+  "type": "minecraft:clamp",
+  "input": {
+    "type": "minecraft:mul",
+    "left": {
+      "type": "minecraft:add",
+      "left": "inhabited_world:rpg_overworld_v2/boundary_distance",
+      "right": -300.0
+    },
+    "right": 0.005263157894736842
+  },
+  "min": 0.0,
+  "max": 1.0
+}

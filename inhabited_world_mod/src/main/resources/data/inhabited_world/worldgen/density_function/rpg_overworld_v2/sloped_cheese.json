@@ -1,0 +1,38 @@
+{
+  "type": "minecraft:cache",
+  "input": {
+    "type": "minecraft:add",
+    "left": {
+      "type": "minecraft:mul",
+      "left": {
+        "type": "minecraft:quarter_negative",
+        "input": {
+          "type": "minecraft:mul",
+          "left": {
+            "type": "minecraft:add",
+            "left": "inhabited_world:rpg_overworld_v2/depth",
+            "right": {
+              "type": "minecraft:cache",
+              "input": {
+                "type": "minecraft:mul",
+                "left": "inhabited_world:rpg_overworld_v2/jaggedness",
+                "right": {
+                  "type": "minecraft:half_negative",
+                  "input": {
+                    "type": "minecraft:noise",
+                    "noise": "minecraft:jagged",
+                    "xz_scale": 1500.0,
+                    "y_scale": 0.0
+                  }
+                }
+              }
+            }
+          },
+          "right": "inhabited_world:rpg_overworld_v2/factor"
+        }
+      },
+      "right": 4.0
+    },
+    "right": "minecraft:overworld/base_3d_noise"
+  }
+}

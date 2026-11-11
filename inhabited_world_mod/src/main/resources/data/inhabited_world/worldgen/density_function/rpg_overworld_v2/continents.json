@@ -1,0 +1,36 @@
+{
+  "type": "minecraft:cache",
+  "input": {
+    "type": "minecraft:range_choice",
+    "input": "inhabited_world:rpg_overworld_v2/boundary_distance",
+    "min_inclusive": -1000000.0,
+    "max_exclusive": 490.0,
+    "when_in_range": {
+      "type": "minecraft:lerp",
+      "alpha": {
+        "type": "minecraft:mul",
+        "left": {
+          "type": "minecraft:mul",
+          "left": "inhabited_world:rpg_overworld_v2/coast_fade",
+          "right": "inhabited_world:rpg_overworld_v2/coast_fade"
+        },
+        "right": {
+          "type": "minecraft:add",
+          "left": 3.0,
+          "right": {
+            "type": "minecraft:mul",
+            "left": "inhabited_world:rpg_overworld_v2/coast_fade",
+            "right": -2.0
+          }
+        }
+      },
+      "first": {
+        "type": "minecraft:max",
+        "left": "minecraft:overworld/continents",
+        "right": -0.05
+      },
+      "second": -0.75
+    },
+    "when_out_of_range": -0.75
+  }
+}

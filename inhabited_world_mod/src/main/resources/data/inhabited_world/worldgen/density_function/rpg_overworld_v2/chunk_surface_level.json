@@ -1,0 +1,6 @@
+{
+  "type": "minecraft:interpolated",
+  "cell_size_xz": 16,
+  "cell_size_y": 1,
+  "input": "inhabited_world:rpg_overworld_v2/preliminary_surface_level"
+}

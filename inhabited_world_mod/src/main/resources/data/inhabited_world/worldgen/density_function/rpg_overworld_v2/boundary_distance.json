@@ -1,0 +1,65 @@
+{
+  "type": "minecraft:cache",
+  "input": {
+    "type": "minecraft:add",
+    "left": {
+      "type": "minecraft:mul",
+      "left": {
+        "type": "minecraft:pow",
+        "base": {
+          "type": "minecraft:add",
+          "left": {
+            "type": "minecraft:pow",
+            "base": {
+              "type": "minecraft:abs",
+              "input": {
+                "type": "minecraft:mul",
+                "left": {
+                  "type": "minecraft:gradient",
+                  "axis": "x",
+                  "from_coordinate": -1000000,
+                  "to_coordinate": 1000000,
+                  "from_value": -1000000.0,
+                  "to_value": 1000000.0
+                },
+                "right": 0.001953125
+              }
+            },
+            "exponent": 4.0
+          },
+          "right": {
+            "type": "minecraft:pow",
+            "base": {
+              "type": "minecraft:abs",
+              "input": {
+                "type": "minecraft:mul",
+                "left": {
+                  "type": "minecraft:gradient",
+                  "axis": "z",
+                  "from_coordinate": -1000000,
+                  "to_coordinate": 1000000,
+                  "from_value": -1000000.0,
+                  "to_value": 1000000.0
+                },
+                "right": 0.001953125
+              }
+            },
+            "exponent": 4.0
+          }
+        },
+        "exponent": 0.25
+      },
+      "right": 512.0
+    },
+    "right": {
+      "type": "minecraft:mul",
+      "left": {
+        "type": "minecraft:noise",
+        "noise": "inhabited_world:rpg_overworld_v2/coast",
+        "xz_scale": 1.0,
+        "y_scale": 0.0
+      },
+      "right": 48.0
+    }
+  }
+}
