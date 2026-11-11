@@ -223,7 +223,13 @@ Before the rename these were "Minecraft: Inhabited", `inhabited`, `io.github.nic
     - **Bypass paths:** patrols and raids are off via dimension attributes; structure-placed mobs are off with structures. **P3: our own structure templates must not contain vanilla villagers, or we hook template entity placement.** Spawners with custom spawn rules skip the check, but can only come from suppressed or disabled sources or a player. Conversions need an existing pseudo-human.
     - Decisions made in the build: ravagers are not in the tag (not human-like; raids are off); `SPAWNER` counts as automatic (a villager egg in a spawner is refused, `/summon` works); End portals can still be assembled in creative but lead nowhere.
 - **Step 4:** pre-generation + boundary (below).
-  - **Half built 2026-10-31, PAUSED for the user's coast choices** (branch `claude/p2a-step4-4fd987`, commit 6a6996d; not merged, because the border cuts through normal terrain until the coast exists).
+  - **BUILT and merged 2026-11-11 (1a31e63; 32 unit + 25 game tests; awaiting the user's in-game look).**
+    - The island uses new noise settings `rpg_overworld_v2` (vanilla density types only; generator script in `tools/worldgen/make_rpg_overworld_v2.py`). The preset now points to v2; v1 is untouched and still counts as an Inhabited World.
+    - A rounded-square fade between 300 and 490 blocks from the centre, with ±48 blocks of coast noise and low ground lifted. Land inside the border is 32–44% on six seeds (41% on the test seed 20261029).
+    - Pre-generation covers 7,744 chunks (map plus a 12-chunk ocean ring). Creation takes ~50 s in the client and ~42 s headless; peak heap ~1 GB; 74 MB on disk. The test-seed spawn is at (−32, 72, −32).
+    - `gradlew build` now takes ~1 min; game tests pre-generate only the northern 14 rows (`-PpregenRows=all` runs everything).
+    - Older Inhabited Worlds keep v1 and get no plan, border or pre-generation.
+  - History: half built 2026-10-31 (6a6996d), then paused for the user's coast choices.
   - **Built:**
     - The first WorldPlan piece (data version, permanent world ID, playable area 1024×1024 centred on 0,0) is made once at creation; Default and older worlds get none.
     - The world border is set from the plan.
@@ -311,6 +317,15 @@ The user has downloaded worlds containing builds (a city) to use as the handcraf
 - its Minecraft version
 - where the downloads are on disk
 - whether the builds are the user's own or need the creators' permission (matters if the mod is ever distributed)
+
+**Drachenfels is the main city (user, 2026-11-11).** It inspired a wished-for feature: AI NPCs building new rooms inside buildings as their need for space grows. Its buildings are massive, with largely empty upper floors left for expansion. This is not in canon yet; it is a proposal for `11`, long-term.
+- The installed copy is in the main checkout's `run/saves/Drachenfels`, already saved in 26.3. Its overworld has 18 region files spanning up to 2048×2560 blocks. The densest regions (r.-1/0, -2/-3, 6+ MB each) suggest a core of roughly 1024×1024, as big as the whole v0.1 map. Measure the real built extent before deciding map size.
+- Extraction approach (my recommendation to the user; not built yet):
+  - Classify blocks automatically: placed blocks vs natural ones, plus natural blocks attached to or enclosed by builds.
+  - Choose the floor cut-off per column from the lowest built block, not one global y.
+  - Produce three zones: an exact mold, kept supporting terrain, and a blend margin.
+  - Show a top-down preview with a few tunable thresholds, then round-trip paste the result into a test world.
+- NPC load: canon `03` separates NPC records from bodies (bodies only near players), so filling the city costs records plus scheduled inference rather than thousands of live entities. Still needs measuring (P4/P9).
 
 **Scope flag:** `09` §3 asks for "one small handcrafted town" with ~6–10 NPCs on a ~1024×1024 map. A large city may need trimming for v0.1, or a canon proposal to enlarge the town. The island shape must also hold its footprint on every seed, which favours coast option C.
 
