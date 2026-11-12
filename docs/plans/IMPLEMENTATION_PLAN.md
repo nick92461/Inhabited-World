@@ -269,7 +269,8 @@ Before the rename these were "Minecraft: Inhabited", `inhabited`, `io.github.nic
       - world creation +1.5–2.5 s
     - Test seed 20261029: town at (272, −160) facing east onto sea; POI at (−240, −240), 518 blocks away; both pass verification.
     - Tests: 57 unit, 30 game.
-    - Open for the user: (1) town on the waterfront by default (chosen) or inland; (2) spawn at the town's edge instead of near the centre (player-visible, not changed).
+    - **Decided 2026-11-12 (user: "Yes, waterfront"):** the town defaults to the waterfront (setting stays `preferred`: inland only if no waterfront plan exists, which never happened in 250 seeds).
+    - Open for the user: spawn at the town's edge instead of near the centre (player-visible, not changed).
 
 **Feature suppression (`06` §15):**
 - A tiny mixin on `PlacedFeature.place(WorldGenLevel, ChunkGenerator, RandomSource, BlockPos)`: if `isRpg(generator)` and the placed feature is in the denylist, return false.
