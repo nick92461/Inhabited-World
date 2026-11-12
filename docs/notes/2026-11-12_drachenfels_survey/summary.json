@@ -1,0 +1,637 @@
+{
+  "scan": {
+    "region_dir": "C:/Coding Projects/Inhabited World/inhabited_world_mod/run/saves/Drachenfels\\dimensions/minecraft/overworld/region",
+    "chunks": 13742,
+    "data_versions": {
+      "5023": 13378,
+      "1343": 364
+    },
+    "seconds": 98.9,
+    "x0": -1024,
+    "z0": -2048
+  },
+  "authored_area_bbox": [
+    -496,
+    -1520,
+    527,
+    -385
+  ],
+  "authored_area_m2": 1067776,
+  "sea_level": 66,
+  "all_built_bbox": [
+    -489,
+    -1495,
+    504,
+    -496
+  ],
+  "all_built_columns": 347477,
+  "building_columns": 159505,
+  "city_outline_bbox": [
+    -372,
+    -1352,
+    387,
+    -688
+  ],
+  "city_outline_m2": 288921,
+  "city_built_m2": 236169,
+  "city_roof_y": [
+    70,
+    118,
+    235
+  ],
+  "city_lowest_built_y": [
+    5,
+    101
+  ],
+  "floor_cutoff_depth_below_ground": [
+    -1,
+    27,
+    128
+  ],
+  "zones_m2": {
+    "outside": 4175104,
+    "keep": 236169,
+    "ground": 67857,
+    "blend": 54011,
+    "drop": 514601,
+    "water": 195138
+  },
+  "buildings_total": 1148,
+  "buildings_in_city": 992,
+  "building_types": {
+    "house": 888,
+    "small structure": 93,
+    "tower": 85,
+    "on water": 50,
+    "hall": 16,
+    "wall segment": 10,
+    "large building": 6
+  },
+  "floor_m2": 225464,
+  "upper_floor_m2": 104040,
+  "empty_upper_m2": 19587,
+  "fitout_m2": 299885,
+  "bed_blocks": 161,
+  "door_blocks": 271,
+  "workstations": 2298,
+  "coast": {
+    "sea_level": 66,
+    "outline_area": 285324,
+    "outline_edge": 2423,
+    "waterfront_length": 777,
+    "waterfront_share": 0.321,
+    "waterfront_sides": {
+      "N": 210,
+      "S": 105,
+      "W": 38,
+      "E": 424
+    },
+    "waterfront_span": {
+      "x": [
+        138,
+        342
+      ],
+      "z": [
+        -1351,
+        -793
+      ]
+    },
+    "sea_bearing_share": {
+      "N": 0.049,
+      "NE": 0.439,
+      "E": 0.265,
+      "SE": 0.201,
+      "S": 0.046,
+      "SW": 0.0,
+      "W": 0.0,
+      "NW": 0.0
+    },
+    "offshore_depth": {
+      "0-16": {
+        "columns": 9674,
+        "median_depth": 13.0,
+        "p10_depth": 5.0,
+        "p90_depth": 19.0
+      },
+      "16-48": {
+        "columns": 24862,
+        "median_depth": 14.0,
+        "p10_depth": 8.0,
+        "p90_depth": 25.0
+      },
+      "48-96": {
+        "columns": 42778,
+        "median_depth": 14.0,
+        "p10_depth": 8.0,
+        "p90_depth": 23.0
+      },
+      "96-160": {
+        "columns": 67977,
+        "median_depth": 15.0,
+        "p10_depth": 8.0,
+        "p90_depth": 20.0
+      }
+    },
+    "pier_reach_max": 98,
+    "pier_reach_p95": 88
+  },
+  "districts": [
+    {
+      "id": "D1",
+      "name": "Harbour",
+      "note": "quay, dock terraces, three piers with moored ships",
+      "bounds": [
+        128,
+        -1250,
+        400,
+        -1030
+      ],
+      "size": [
+        273,
+        221
+      ],
+      "footprint_m2": 60333,
+      "built_m2": 36187,
+      "buildings": 158,
+      "small_structures": 5,
+      "types": {
+        "house": 113,
+        "on water": 37,
+        "small structure": 5,
+        "tower": 4,
+        "hall": 3,
+        "large building": 1
+      },
+      "ground_y": [
+        38,
+        100
+      ],
+      "roof_y": [
+        70,
+        140
+      ],
+      "vertical_range": [
+        38,
+        140
+      ],
+      "floor_m2": 33732,
+      "upper_floor_m2": 14867,
+      "empty_upper_m2": 3519,
+      "fitout_m2": 37431,
+      "bed_blocks": 18,
+      "workstations": 407,
+      "home_or_workplace_buildings": 121,
+      "significant_npcs": 60,
+      "residents_now": 843,
+      "residents_with_fitout": 1779,
+      "waterfront_m": 288,
+      "touches_waterfront": true
+    },
+    {
+      "id": "D2",
+      "name": "North Shore",
+      "note": "terraces on the north-east bend of the coast",
+      "bounds": [
+        128,
+        -1360,
+        300,
+        -1250
+      ],
+      "size": [
+        173,
+        111
+      ],
+      "footprint_m2": 19203,
+      "built_m2": 8232,
+      "buildings": 22,
+      "small_structures": 3,
+      "types": {
+        "house": 14,
+        "on water": 4,
+        "small structure": 3,
+        "tower": 3,
+        "hall": 1
+      },
+      "ground_y": [
+        53,
+        100
+      ],
+      "roof_y": [
+        70,
+        137
+      ],
+      "vertical_range": [
+        48,
+        137
+      ],
+      "floor_m2": 7518,
+      "upper_floor_m2": 3795,
+      "empty_upper_m2": 1320,
+      "fitout_m2": 8096,
+      "bed_blocks": 9,
+      "workstations": 51,
+      "home_or_workplace_buildings": 18,
+      "significant_npcs": 9,
+      "residents_now": 188,
+      "residents_with_fitout": 390,
+      "waterfront_m": 211,
+      "touches_waterfront": true
+    },
+    {
+      "id": "D3",
+      "name": "Castle Quarter",
+      "note": "keep with gardens at the head of the avenue, merchant terraces",
+      "bounds": [
+        -60,
+        -1360,
+        128,
+        -1030
+      ],
+      "size": [
+        189,
+        331
+      ],
+      "footprint_m2": 52159,
+      "built_m2": 38129,
+      "buildings": 96,
+      "small_structures": 6,
+      "types": {
+        "house": 84,
+        "small structure": 6,
+        "tower": 5,
+        "hall": 4,
+        "large building": 3
+      },
+      "ground_y": [
+        99,
+        190
+      ],
+      "roof_y": [
+        102,
+        228
+      ],
+      "vertical_range": [
+        5,
+        223
+      ],
+      "floor_m2": 31161,
+      "upper_floor_m2": 16070,
+      "empty_upper_m2": 2591,
+      "fitout_m2": 35665,
+      "bed_blocks": 20,
+      "workstations": 245,
+      "home_or_workplace_buildings": 96,
+      "significant_npcs": 48,
+      "residents_now": 779,
+      "residents_with_fitout": 1671,
+      "waterfront_m": 0,
+      "touches_waterfront": false
+    },
+    {
+      "id": "D4",
+      "name": "North-West Terraces",
+      "note": "perimeter blocks below the mountain",
+      "bounds": [
+        -290,
+        -1360,
+        -60,
+        -1160
+      ],
+      "size": [
+        231,
+        201
+      ],
+      "footprint_m2": 46431,
+      "built_m2": 23728,
+      "buildings": 77,
+      "small_structures": 2,
+      "types": {
+        "house": 73,
+        "small structure": 2,
+        "wall segment": 2,
+        "hall": 1,
+        "tower": 1
+      },
+      "ground_y": [
+        99,
+        206
+      ],
+      "roof_y": [
+        107,
+        245
+      ],
+      "vertical_range": [
+        13,
+        168
+      ],
+      "floor_m2": 16531,
+      "upper_floor_m2": 6949,
+      "empty_upper_m2": 2127,
+      "fitout_m2": 19055,
+      "bed_blocks": 5,
+      "workstations": 149,
+      "home_or_workplace_buildings": 75,
+      "significant_npcs": 37,
+      "residents_now": 413,
+      "residents_with_fitout": 890,
+      "waterfront_m": 0,
+      "touches_waterfront": false
+    },
+    {
+      "id": "D5",
+      "name": "West Lower Town",
+      "note": "small wooden houses, pond and stream",
+      "bounds": [
+        -360,
+        -1160,
+        -95,
+        -915
+      ],
+      "size": [
+        266,
+        246
+      ],
+      "footprint_m2": 60836,
+      "built_m2": 35007,
+      "buildings": 160,
+      "small_structures": 7,
+      "types": {
+        "house": 149,
+        "tower": 11,
+        "small structure": 7
+      },
+      "ground_y": [
+        83,
+        132
+      ],
+      "roof_y": [
+        86,
+        218
+      ],
+      "vertical_range": [
+        76,
+        218
+      ],
+      "floor_m2": 29256,
+      "upper_floor_m2": 12263,
+      "empty_upper_m2": 3491,
+      "fitout_m2": 32086,
+      "bed_blocks": 42,
+      "workstations": 246,
+      "home_or_workplace_buildings": 160,
+      "significant_npcs": 80,
+      "residents_now": 731,
+      "residents_with_fitout": 1534,
+      "waterfront_m": 0,
+      "touches_waterfront": false
+    },
+    {
+      "id": "D6",
+      "name": "Old Core",
+      "note": "large terraces between the curved road and the avenue",
+      "bounds": [
+        -95,
+        -1160,
+        20,
+        -1030
+      ],
+      "size": [
+        116,
+        131
+      ],
+      "footprint_m2": 15196,
+      "built_m2": 14627,
+      "buildings": 56,
+      "small_structures": 3,
+      "types": {
+        "house": 47,
+        "wall segment": 6,
+        "small structure": 3,
+        "hall": 2,
+        "large building": 1
+      },
+      "ground_y": [
+        90,
+        113
+      ],
+      "roof_y": [
+        106,
+        146
+      ],
+      "vertical_range": [
+        76,
+        146
+      ],
+      "floor_m2": 15877,
+      "upper_floor_m2": 7988,
+      "empty_upper_m2": 196,
+      "fitout_m2": 16084,
+      "bed_blocks": 1,
+      "workstations": 87,
+      "home_or_workplace_buildings": 50,
+      "significant_npcs": 25,
+      "residents_now": 397,
+      "residents_with_fitout": 799,
+      "waterfront_m": 0,
+      "touches_waterfront": false
+    },
+    {
+      "id": "D7",
+      "name": "Rotunda Quarter",
+      "note": "round courtyard building and its terraces",
+      "bounds": [
+        -135,
+        -1030,
+        30,
+        -850
+      ],
+      "size": [
+        166,
+        181
+      ],
+      "footprint_m2": 30046,
+      "built_m2": 26715,
+      "buildings": 118,
+      "small_structures": 2,
+      "types": {
+        "house": 112,
+        "wall segment": 2,
+        "tower": 2,
+        "small structure": 2,
+        "hall": 2
+      },
+      "ground_y": [
+        87,
+        114
+      ],
+      "roof_y": [
+        102,
+        159
+      ],
+      "vertical_range": [
+        76,
+        159
+      ],
+      "floor_m2": 26712,
+      "upper_floor_m2": 12654,
+      "empty_upper_m2": 1814,
+      "fitout_m2": 30809,
+      "bed_blocks": 18,
+      "workstations": 187,
+      "home_or_workplace_buildings": 116,
+      "significant_npcs": 58,
+      "residents_now": 668,
+      "residents_with_fitout": 1438,
+      "waterfront_m": 0,
+      "touches_waterfront": false
+    },
+    {
+      "id": "D8",
+      "name": "Cathedral Quarter",
+      "note": "cathedral, its close and the fountain square",
+      "bounds": [
+        30,
+        -1030,
+        135,
+        -750
+      ],
+      "size": [
+        106,
+        281
+      ],
+      "footprint_m2": 29786,
+      "built_m2": 23208,
+      "buildings": 26,
+      "small_structures": 7,
+      "types": {
+        "house": 13,
+        "tower": 10,
+        "small structure": 7,
+        "hall": 2,
+        "large building": 1
+      },
+      "ground_y": [
+        105,
+        121
+      ],
+      "roof_y": [
+        117,
+        235
+      ],
+      "vertical_range": [
+        78,
+        235
+      ],
+      "floor_m2": 27014,
+      "upper_floor_m2": 15176,
+      "empty_upper_m2": 389,
+      "fitout_m2": 83634,
+      "bed_blocks": 2,
+      "workstations": 164,
+      "home_or_workplace_buildings": 26,
+      "significant_npcs": 13,
+      "residents_now": 675,
+      "residents_with_fitout": 2766,
+      "waterfront_m": 0,
+      "touches_waterfront": false
+    },
+    {
+      "id": "D9",
+      "name": "Fishermen's Shore",
+      "note": "small wooden houses down to a natural shore",
+      "bounds": [
+        135,
+        -1030,
+        400,
+        -750
+      ],
+      "size": [
+        266,
+        281
+      ],
+      "footprint_m2": 74746,
+      "built_m2": 33257,
+      "buildings": 145,
+      "small_structures": 4,
+      "types": {
+        "house": 127,
+        "on water": 9,
+        "tower": 8,
+        "small structure": 4,
+        "hall": 1
+      },
+      "ground_y": [
+        45,
+        117
+      ],
+      "roof_y": [
+        70,
+        158
+      ],
+      "vertical_range": [
+        49,
+        158
+      ],
+      "floor_m2": 19423,
+      "upper_floor_m2": 6279,
+      "empty_upper_m2": 2434,
+      "fitout_m2": 20126,
+      "bed_blocks": 15,
+      "workstations": 264,
+      "home_or_workplace_buildings": 136,
+      "significant_npcs": 68,
+      "residents_now": 486,
+      "residents_with_fitout": 989,
+      "waterfront_m": 288,
+      "touches_waterfront": true
+    },
+    {
+      "id": "D10",
+      "name": "South Ward",
+      "note": "southern terraces and walled enclosure",
+      "bounds": [
+        -135,
+        -850,
+        30,
+        -670
+      ],
+      "size": [
+        166,
+        181
+      ],
+      "footprint_m2": 30046,
+      "built_m2": 18645,
+      "buildings": 111,
+      "small_structures": 2,
+      "types": {
+        "house": 107,
+        "tower": 4,
+        "small structure": 2
+      },
+      "ground_y": [
+        107,
+        135
+      ],
+      "roof_y": [
+        120,
+        182
+      ],
+      "vertical_range": [
+        96,
+        182
+      ],
+      "floor_m2": 17443,
+      "upper_floor_m2": 7555,
+      "empty_upper_m2": 1587,
+      "fitout_m2": 16091,
+      "bed_blocks": 21,
+      "workstations": 79,
+      "home_or_workplace_buildings": 111,
+      "significant_npcs": 55,
+      "residents_now": 436,
+      "residents_with_fitout": 838,
+      "waterfront_m": 0,
+      "touches_waterfront": false
+    }
+  ]
+}

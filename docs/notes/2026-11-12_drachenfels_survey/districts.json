@@ -1,0 +1,25 @@
+{
+  "about": "Drachenfels district outlines in world block coordinates [x, z], drawn along the city's seams: the north-south avenue (x ~20), the cross street at the fountain square (z ~-1030), the street behind the harbour (x ~128), the curved road bounding the wooden west quarter (x ~-95) and the street north of the harbour basin (z ~-1250). A building belongs to the district holding its centre. Edit and re-run 'python -m buildimport survey ... --districts' to re-measure.",
+  "districts": [
+    {"id": "D1", "name": "Harbour", "note": "quay, dock terraces, three piers with moored ships",
+     "polygon": [[128, -1250], [400, -1250], [400, -1030], [128, -1030]], "label_at": [250, -1215]},
+    {"id": "D2", "name": "North Shore", "note": "terraces on the north-east bend of the coast",
+     "polygon": [[128, -1360], [300, -1360], [300, -1250], [128, -1250]], "label_at": [214, -1330]},
+    {"id": "D3", "name": "Castle Quarter", "note": "keep with gardens at the head of the avenue, merchant terraces",
+     "polygon": [[-60, -1360], [128, -1360], [128, -1030], [20, -1030], [20, -1160], [-60, -1160]], "label_at": [40, -1300]},
+    {"id": "D4", "name": "North-West Terraces", "note": "perimeter blocks below the mountain",
+     "polygon": [[-290, -1360], [-60, -1360], [-60, -1160], [-290, -1160]], "label_at": [-175, -1300]},
+    {"id": "D5", "name": "West Lower Town", "note": "small wooden houses, pond and stream",
+     "polygon": [[-360, -1160], [-95, -1160], [-95, -1030], [-135, -1030], [-135, -915], [-360, -915]], "label_at": [-250, -1060]},
+    {"id": "D6", "name": "Old Core", "note": "large terraces between the curved road and the avenue",
+     "polygon": [[-95, -1160], [20, -1160], [20, -1030], [-95, -1030]], "label_at": [-38, -1095]},
+    {"id": "D7", "name": "Rotunda Quarter", "note": "round courtyard building and its terraces",
+     "polygon": [[-135, -1030], [30, -1030], [30, -850], [-135, -850]], "label_at": [-52, -985]},
+    {"id": "D8", "name": "Cathedral Quarter", "note": "cathedral, its close and the fountain square",
+     "polygon": [[30, -1030], [135, -1030], [135, -750], [30, -750]], "label_at": [82, -770]},
+    {"id": "D9", "name": "Fishermen's Shore", "note": "small wooden houses down to a natural shore",
+     "polygon": [[135, -1030], [400, -1030], [400, -750], [135, -750]], "label_at": [250, -800]},
+    {"id": "D10", "name": "South Ward", "note": "southern terraces and walled enclosure",
+     "polygon": [[-135, -850], [30, -850], [30, -670], [-135, -670]], "label_at": [-52, -700]}
+  ]
+}
