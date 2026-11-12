@@ -16,7 +16,8 @@ import net.minecraft.resources.Identifier;
   - rules: the rules it was placed under, after any fallback step
   - bounds: where the build goes (Phase 3 places it here)
   - region: the site's authoritative semantic boundary, the build plus its blend border: the settlement boundary of
-    a town, the semantic region of a POI (02 section 6). It is 2D for now; Phase 2B gives it a vertical extent.
+    a town, the semantic region of a POI (02 section 6). Its 3D semantic regions (SemanticRegion, from SiteRegions)
+    stand on this footprint.
   - waterfront: which side faces the sea, for a waterfront site
   - predicted: the terrain the planner measured from the generator's noise
  */

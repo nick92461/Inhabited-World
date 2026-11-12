@@ -8,9 +8,8 @@ import net.minecraft.world.level.saveddata.SavedDataType;
 
 /*
   Saves the WorldPlan in the world's own data folder (data/inhabited_world/world_plan.dat), one file per domain
-  (08 section 49). The plan is written when the world is created; the only later write records verification after
-  pre-generation, once. A version 1 plan read from disk is upgraded in memory and written as version 2 only if
-  something else marks it changed.
+  (08 section 49). The plan is written when the world is created; the only later writes are verification after
+  pre-generation (once) and a migration from an older data version (once, at the next save after it is read).
  */
 public final class WorldPlanData extends SavedData {
     /*
@@ -22,13 +21,28 @@ public final class WorldPlanData extends SavedData {
             () -> {
                 throw new IllegalStateException("a WorldPlan is only ever made when its world is created");
             },
-            WorldPlan.CODEC.xmap(WorldPlanData::new, WorldPlanData::plan),
+            WorldPlan.STORED_CODEC.flatXmap(
+                    stored -> WorldPlan.upgrade(stored).map(plan -> new WorldPlanData(plan, stored.dataVersion() != plan.dataVersion())),
+                    data -> WorldPlan.checkWritable(data.plan())),
             DataFixTypes.SAVED_DATA_STOPWATCHES);
 
     private WorldPlan plan;
 
     public WorldPlanData(WorldPlan plan) {
+        this(plan, false);
+    }
+
+    /**
+     * @param migrated whether the plan was read from an older data version; it is then written back as the current
+     *                 version at the next save, so a migration's result is fixed once made (canon 02 section 7)
+     */
+    private WorldPlanData(WorldPlan plan, boolean migrated) {
         this.plan = plan;
+        if (migrated) {
+            InhabitedWorld.LOGGER.info("[{}] migrated the WorldPlan of world {} to data version {}; it is saved as such at the next save",
+                    InhabitedWorld.MOD_ID, plan.worldId(), plan.dataVersion());
+            this.setDirty();
+        }
     }
 
     public WorldPlan plan() {

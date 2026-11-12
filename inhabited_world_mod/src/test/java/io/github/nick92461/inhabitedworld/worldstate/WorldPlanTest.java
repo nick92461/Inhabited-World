@@ -12,6 +12,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.mojang.serialization.JsonOps;
 
+import io.github.nick92461.inhabitedworld.region.RegionIndex;
+import io.github.nick92461.inhabitedworld.region.SiteRegions;
 import io.github.nick92461.inhabitedworld.worldgen.PlayableArea;
 import io.github.nick92461.inhabitedworld.worldgen.planner.BlockRect;
 import io.github.nick92461.inhabitedworld.worldgen.planner.PlannedSite;
@@ -51,7 +53,7 @@ class WorldPlanTest {
     @Test
     void savesAndLoadsUnchanged() {
         JsonObject json = encode(this.plan);
-        assertEquals(2, json.get("data_version").getAsInt(), "every persisted domain carries a data version");
+        assertEquals(3, json.get("data_version").getAsInt(), "every persisted domain carries a data version");
         assertEquals("7b0e4f43-58a4-4c1c-9b55-1f4b7f2d9c11", json.get("world_id").getAsString());
         assertEquals("inhabited_world:site_planner", json.getAsJsonObject("planner").get("algorithm").getAsString());
         JsonObject town = json.getAsJsonArray("sites").get(0).getAsJsonObject();
@@ -85,14 +87,15 @@ class WorldPlanTest {
         assertEquals(ID, read.worldId());
         assertFalse(read.hasSites());
         assertTrue(read.planner().isEmpty());
-        assertEquals(2, encode(read).get("data_version").getAsInt(), "it is written back as version 2");
+        assertEquals(3, encode(read).get("data_version").getAsInt(), "it is written back as the current version");
+        assertTrue(read.regions().isEmpty(), "a world without sites has no regions: all wilderness");
         assertEquals(read, WorldPlan.CODEC.parse(JsonOps.INSTANCE, encode(read)).getOrThrow());
     }
 
     @Test
     void refusesWhatItCannotRead() {
         JsonObject newer = encode(this.plan);
-        newer.addProperty("data_version", 3);
+        newer.addProperty("data_version", 4);
         assertTrue(WorldPlan.CODEC.parse(JsonOps.INSTANCE, newer).isError(), "a newer data version is refused");
 
         JsonObject unversioned = encode(this.plan);
@@ -110,6 +113,63 @@ class WorldPlanTest {
         JsonObject v1WithSites = encode(this.plan);
         v1WithSites.addProperty("data_version", 1);
         assertTrue(WorldPlan.CODEC.parse(JsonOps.INSTANCE, v1WithSites).isError(), "version 1 had no sites");
+
+        JsonObject v2WithRegions = encode(this.plan);
+        v2WithRegions.addProperty("data_version", 2);
+        assertTrue(WorldPlan.CODEC.parse(JsonOps.INSTANCE, v2WithRegions).isError(), "version 2 had no regions");
+
+        JsonObject unprotectedTown = encode(this.plan);
+        unprotectedTown.getAsJsonArray("regions").remove(0);
+        assertTrue(WorldPlan.CODEC.parse(JsonOps.INSTANCE, unprotectedTown).isError(), "every planned site has its semantic region");
+
+        JsonObject strayRegion = encode(this.plan);
+        strayRegion.getAsJsonArray("regions").get(0).getAsJsonObject().getAsJsonObject("volume").addProperty("max_x", 5000);
+        assertTrue(WorldPlan.CODEC.parse(JsonOps.INSTANCE, strayRegion).isError(), "a region stays inside its site's semantic boundary");
+
+        JsonObject unknownSite = encode(this.plan);
+        unknownSite.getAsJsonArray("regions").get(0).getAsJsonObject().addProperty("site", "elsewhere");
+        assertTrue(WorldPlan.CODEC.parse(JsonOps.INSTANCE, unknownSite).isError(), "a region names one of the plan's sites");
+
+        JsonObject unknownProfile = encode(this.plan);
+        unknownProfile.getAsJsonArray("regions").get(0).getAsJsonObject().addProperty("spawn_profile", "inhabited_world:from_the_future");
+        assertTrue(WorldPlan.CODEC.parse(JsonOps.INSTANCE, unknownProfile).isError(), "an unknown spawn profile is refused");
+    }
+
+    // P2B: the plan saves each site's 3D semantic region and its spawn profile (06 section 17.12 items 1 and 5).
+    @Test
+    void regionsAreSavedWithThePlan() {
+        assertEquals(List.of(SiteRegions.derive(TOWN), SiteRegions.derive(POI)), this.plan.regions());
+        JsonObject region = encode(this.plan).getAsJsonArray("regions").get(0).getAsJsonObject();
+        assertEquals("town", region.get("id").getAsString());
+        assertEquals("settlement", region.get("kind").getAsString());
+        assertEquals("town", region.get("site").getAsString());
+        assertEquals("inhabited_world:protected_settlement", region.get("spawn_profile").getAsString());
+        assertEquals(-304, region.getAsJsonObject("volume").get("min_x").getAsInt());
+        assertEquals(80 - 24 - SiteRegions.SETTLEMENT_DEPTH, region.getAsJsonObject("volume").get("min_y").getAsInt());
+        assertEquals(SiteRegions.WORLD_MAX_Y, region.getAsJsonObject("volume").get("max_y").getAsInt());
+        RegionIndex index = this.plan.buildRegionIndex();
+        assertEquals("town", index.regionAt(-150, 80, -250).id());
+        assertEquals("external_poi", index.regionAt(240, 10, -240).id());
+        assertEquals("wilderness", index.regionAt(0, 80, 0).id());
+    }
+
+    /*
+      A step-5 world (data version 2) is migrated once: its regions are derived from its saved sites exactly as a new
+      plan's are, it reads as version 3, and the saved data is marked to be written back.
+     */
+    @Test
+    void aVersionTwoPlanIsMigratedToRegions() {
+        JsonObject v2 = encode(this.plan);
+        v2.addProperty("data_version", 2);
+        v2.remove("regions");
+        WorldPlan read = WorldPlan.CODEC.parse(JsonOps.INSTANCE, v2).getOrThrow();
+        assertEquals(WorldPlan.DATA_VERSION, read.dataVersion());
+        assertEquals(this.plan, read, "a migrated plan equals the plan the same sites make today");
+
+        WorldPlanData migrated = WorldPlanData.TYPE.codec().parse(JsonOps.INSTANCE, v2).getOrThrow();
+        assertTrue(migrated.isDirty(), "a migrated plan is written back at the next save, so the migration runs once");
+        WorldPlanData current = WorldPlanData.TYPE.codec().parse(JsonOps.INSTANCE, encode(this.plan)).getOrThrow();
+        assertFalse(current.isDirty(), "a current plan is not rewritten");
     }
 
     // Only a new Inhabited World gets a plan: never a Default world, and never a second plan.

@@ -8,6 +8,8 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 
+import io.github.nick92461.inhabitedworld.region.Regions;
+import io.github.nick92461.inhabitedworld.region.SemanticRegion;
 import io.github.nick92461.inhabitedworld.worldgen.RpgWorlds;
 
 import net.minecraft.commands.CommandBuildContext;
@@ -33,7 +35,8 @@ import net.minecraft.world.entity.SpawnPlacements;
   For minecraft:creaking it also reports the creaking-heart rule (generated hearts stay dormant, placed ones work).
 
   Registered only in development runs (10 section 60: test conveniences never reach the shipped game).
-  P2B adds the semantic region and the POI or settlement that supplied the rule.
+  It reports the semantic region at that position (canon 10 section 60: current region, active policy, why a spawn
+  is allowed or refused, spawn reason, entity type, and which settlement or POI supplied the rule).
  */
 public final class SpawnPolicyCommand {
     private static final DynamicCommandExceptionType UNKNOWN_REASON =
@@ -69,19 +72,23 @@ public final class SpawnPolicyCommand {
         BlockPos pos = BlockPos.containing(source.getPosition());
         boolean rpg = RpgWorlds.isRpg(level);
         boolean prohibited = SpawnGovernance.isProhibitedHumanLike(type);
-        SpawnPolicy.Decision decision = SpawnGovernance.decide(type, level, reason);
+        boolean hostile = SpawnGovernance.isHostile(type);
+        SpawnPolicy.Decision decision = SpawnGovernance.decide(type, level, reason, pos);
         // The complete check a natural spawn would make here: vanilla's placement rules, then ours.
         boolean fullCheck = SpawnPlacements.checkSpawnRules(type, level, reason, pos, level.getRandom());
+        SemanticRegion region = Regions.at(level, pos.getX(), pos.getY(), pos.getZ());
 
         String text = "Spawn policy at " + pos.toShortString() + " in " + level.dimension().identifier()
                 + " (Inhabited World: " + yesNo(rpg) + ")\n"
+                + "  semantic region: " + (region == null ? "wilderness (this level has no planned regions)" : region.describe()) + "\n"
+                + "  rule supplied by: " + (region == null || region.site().isEmpty() ? "the wilderness" : "site " + region.site().get()) + "\n"
                 + EntityType.getKey(type) + ", reason " + reason.name().toLowerCase(Locale.ROOT)
-                + " (" + SpawnPolicy.origin(reason).name().toLowerCase(Locale.ROOT) + "): "
+                + " (origin " + SpawnPolicy.origin(reason).name().toLowerCase(Locale.ROOT) + "): "
                 + (decision.allowed() ? "ALLOWED" : "REFUSED") + " - " + decision.explanation() + "\n"
+                + "  hostile (monster category): " + yesNo(hostile) + "\n"
                 + "  prohibited human-like (tag " + SpawnGovernance.PROHIBITED_HUMAN_LIKE.location() + "): " + yesNo(prohibited) + "\n"
-                + "  full spawn check at this spot (vanilla rules, then ours): " + (fullCheck ? "passes" : "fails") + "\n"
-                + creakingHeartLines(type, rpg)
-                + "  semantic region: none yet (regions arrive in Phase 2B)";
+                + "  full spawn check at this spot (vanilla rules, then ours): " + (fullCheck ? "passes" : "fails")
+                + (creakingHeartLines(type, rpg).isEmpty() ? "" : "\n" + creakingHeartLines(type, rpg).stripTrailing());
         source.sendSuccess(() -> Component.literal(text), false);
         return decision.allowed() ? 1 : 0;
     }

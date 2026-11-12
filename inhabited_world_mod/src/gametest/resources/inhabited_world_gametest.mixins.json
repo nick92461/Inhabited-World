@@ -4,7 +4,8 @@
 	"compatibilityLevel": "JAVA_25",
 	"mixins": [
 		"CustomSpawnersAccessor",
-		"GameTestServerMixin"
+		"GameTestServerMixin",
+		"LevelSkyDarkenAccessor"
 	],
 	"injectors": {
 		"defaultRequire": 1

@@ -2,6 +2,7 @@ package io.github.nick92461.inhabitedworld.mixin;
 
 import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 
+import io.github.nick92461.inhabitedworld.region.Regions;
 import io.github.nick92461.inhabitedworld.worldgen.pregen.Pregeneration;
 import io.github.nick92461.inhabitedworld.worldstate.SiteVerifier;
 import io.github.nick92461.inhabitedworld.worldstate.WorldPlans;
@@ -23,7 +24,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
   1. createLevels, only for a world being created (vanilla's "not initialized yet" branch), just before vanilla's
      spawn search generates the first chunks: make the WorldPlan (the planner chooses the sites) and set the world
      border.
-  2. prepareLevels, at the start: pre-generate the playable area if the plan says so and it isn't finished, then
+  2. prepareLevels, at the start: build the semantic-region index from the saved plan (Regions), pre-generate the
+     playable area if the plan says so and it isn't finished, then
      verify the planned sites against the generated terrain once pre-generation is complete.
   3. If pre-generation reported progress as the LOAD_INITIAL_CHUNKS stage, vanilla doesn't start that stage again
      (a second start would push the loading bar past 100%). Vanilla still loads its own initial chunks; for a new
@@ -49,6 +51,8 @@ public abstract class MinecraftServerMixin {
     @Inject(method = "prepareLevels", at = @At("HEAD"))
     private void inhabitedWorld$pregenerate(CallbackInfo ci) {
         MinecraftServer server = (MinecraftServer) (Object) this;
+        // An opened world gets its semantic regions before any chunk generates or loads and before the first mob spawns.
+        Regions.install(server);
         this.inhabitedWorld$pregenerationStartedInitialChunks = Pregeneration.runIfNeeded(server, this.levelLoadListener);
         SiteVerifier.verifyIfNeeded(server);
     }
