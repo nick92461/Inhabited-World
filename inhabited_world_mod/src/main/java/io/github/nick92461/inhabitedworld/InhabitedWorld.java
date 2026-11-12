@@ -1,5 +1,6 @@
 package io.github.nick92461.inhabitedworld;
 
+import io.github.nick92461.inhabitedworld.region.RegionEdges;
 import io.github.nick92461.inhabitedworld.spawn.SpawnPolicyCommand;
 import io.github.nick92461.inhabitedworld.worldgen.RpgWorlds;
 import io.github.nick92461.inhabitedworld.worldgen.pregen.Pregeneration;
@@ -35,6 +36,7 @@ public class InhabitedWorld implements ModInitializer {
 
 		// Debug commands exist only in development runs (canon 10 section 60, Testing Workflow).
 		if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
+			RegionEdges.init();
 			CommandRegistrationCallback.EVENT.register((dispatcher, context, selection) -> {
 				SpawnPolicyCommand.register(dispatcher, context);
 				WorldPlanCommand.register(dispatcher);

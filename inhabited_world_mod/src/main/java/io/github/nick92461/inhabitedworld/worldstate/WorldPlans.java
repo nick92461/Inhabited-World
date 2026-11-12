@@ -3,6 +3,7 @@ package io.github.nick92461.inhabitedworld.worldstate;
 import java.util.UUID;
 
 import io.github.nick92461.inhabitedworld.InhabitedWorld;
+import io.github.nick92461.inhabitedworld.region.Regions;
 import io.github.nick92461.inhabitedworld.worldgen.PlayableArea;
 import io.github.nick92461.inhabitedworld.worldgen.RpgWorlds;
 import io.github.nick92461.inhabitedworld.worldgen.planner.NoisePlanning;
@@ -69,6 +70,8 @@ public final class WorldPlans {
             InhabitedWorld.LOGGER.warn("[{}] this seed needed the planner's fallback step {} ({}): see the plan's recorded rules",
                     InhabitedWorld.MOD_ID, planning.outcome().run().relaxation(), planning.outcome().run().describe());
         }
+        // The semantic regions apply from the first chunk on (vanilla's spawn search generates chunks next).
+        Regions.install(server);
     }
 
     /*

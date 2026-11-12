@@ -9,7 +9,9 @@
 		"CreakingHeartBlockEntityMixin",
 		"FeaturePlacerMixin",
 		"MinecraftServerMixin",
+		"PhantomSpawnerMixin",
 		"ServerLevelMixin",
+		"ServerLevelRegionsMixin",
 		"SpawnPlacementsMixin",
 		"WorldDimensionsMixin"
 	],
