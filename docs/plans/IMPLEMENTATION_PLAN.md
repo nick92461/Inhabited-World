@@ -308,6 +308,42 @@ Sites are chosen from deterministic noise sampling before generation. After pre-
 - Regions are 3D volumes. Most-specific-wins: POI > settlement > wilderness.
 - One decision on (entity type, spawn reason, region). Natural and chunk-generation spawns are governed; commands, eggs and our encounters pass.
 - Pure-Java rules plus a thin mixin, and an in-memory index from the WorldPlan with allocation-free lookup. Chunks entirely inside wilderness can skip region checks.
+- **P2B BUILT and merged 2026-11-12 (dad2df4, merge 0ccf01f).**
+  - Package `region/`: TOWN, EXTERNAL_POI and WILDERNESS are real semantic regions with 3D boxes, one per planned site (count-agnostic).
+    - Wilderness is everything uncovered.
+    - Precedence: POI > settlement > wilderness, then the smaller region, then the ID.
+  - Persisted in WorldPlan data v3. v2 plans migrate once from their saved sites and are written back. v1 worlds have no regions.
+  - Vertical extent:
+    - town: from 32 blocks below its lowest ground up to the world top, so cellars and sky are covered and no phantoms appear over the streets
+    - POI: from the world bottom up to 32 blocks above its ground, because a mine's depth is unknown until P3
+  - `RegionIndex` is an allocation-free chunk-column grid installed on the level when the plan is made and when a world opens.
+    - Lookup costs 5.5–9.5 ns; a full decision costs 8–15.5 ns live.
+    - 5 million decisions allocated 24 bytes.
+  - Spawn origins are now four:
+    - AMBIENT: natural, chunk generation, patrol, reinforcement, event; hostiles are refused in town
+    - SOURCED: spawner, trial spawner, structure, mob-summoned, jockey, triggered; allowed
+    - DELIBERATE: allowed everywhere
+    - DERIVED: allowed everywhere
+    - The human-like ban covers ambient and sourced spawns everywhere.
+  - The POI has a vanilla-like placeholder `SpawnProfile`; P3 plugs its threat profile in at the same point.
+  - Bypass paths:
+    - phantoms: new `PhantomSpawnerMixin` applies the same decision
+    - thunderstorm skeleton traps in town: become plain lightning (`ServerLevelRegionsMixin`)
+    - zombie reinforcements: already go through `checkSpawnRules`
+  - Dev commands: `/inhabited plan region`, `/inhabited plan edges` (particle outlines), and `/inhabited spawnpolicy <mob>` (now shows the region).
+  - Controlled game test with 300 attempts per chamber:
+    - wilderness ~1,000 monsters, POI ~990, town 0
+    - town with regions removed ~960
+    - phantoms: 0 over town, 68 over wilderness
+  - Tests: 79 unit, 38 game.
+  - Known issues:
+    - the skeleton-trap rule is unit-tested only
+    - silverfish in the town's infested stone can still appear (P3 replaces that ground)
+    - P3 town templates must contain no vanilla hostiles or villagers
+  - Open for the user:
+    1. town region depth of 32 blocks below ground
+    2. zombies that walk into town can't call reinforcements there
+    3. a spawner block placed in town (creative) still works
 - Guaranteed encounters are persisted (not spawned / active / defeated), persistence-required and spawned lazily when a player approaches. **Verify in P3** that persistence-required mobs don't count toward mob caps.
 - Debug command reporting region, policy, reason, entity and source POI (`10` §60).
 
