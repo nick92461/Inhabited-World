@@ -244,13 +244,32 @@ Before the rename these were "Minecraft: Inhabited", `inhabited`, `io.github.nic
     - pre-generate a ~12-chunk ocean ring past the border (+~20 s at creation)
     - 1024×1024 centred on 0,0, spawn near the centre
     - vanilla loading screen for now
-    - The step 4 session is finishing it on its branch.
+    - Built and merged (1a31e63).
   - The prototype maps and generator are in the session's hand-over notes.
 - **Step 5 (planner, closes P2A):**
   - site selection for the town and the external POI from deterministic noise sampling before generation (`02` §6–§8)
   - the rest of the WorldPlan: POI placements and bounds, and a spawn marker if useful
   - verification after pre-generation that both required sites exist
   - The town's footprint comes from the imported build (below), so the planner needs at least its bounding box. Placeholder bounds are fine until the build is ready.
+  - **BUILT and merged 2026-11-12 (35938ae, merge e5f52b5).**
+    - Package `worldgen/planner`: `SitePlanner` and `SiteEvaluator` sample the generator's own noise (`NoiseTerrainSampler`) once per chunk, score chunk-aligned candidates on land, slope, height and mountain cover, then pick deterministically among the near-best by seed.
+    - Four recorded relaxation steps (strict, looser terrain, looser layout, last resort). The last resort always places every site.
+    - `V01Sites` holds every tunable number:
+      - town placeholder 256×256 plus a 32-block blend border
+      - POI 96×96 plus 16
+      - at least 128 blocks of wilderness between them, at most 640 between centres
+      - town waterfront **preferred** (switchable to none or required)
+    - WorldPlan data v2 holds a list of sites (kind, catalog ID, footprint, rules, bounds, semantic region), the planner name/version, the relaxation used, and the verification. v1 plans load with no sites and are never re-planned.
+    - `SiteVerifier` runs after pre-generation completes. It re-measures sites from real chunks with the same evaluator, within tolerances and never below `VALID_GROUND`, and checks the spawn isn't inside a POI. It records once. On failure it logs an error and records it; sites never move.
+    - Dev command: `/inhabited plan` and `/inhabited plan tp <site>`.
+    - Measured over 250 seeds:
+      - every seed got both sites; 211 strict, 39 looser terrain, none needing the last resort
+      - town 195–378 blocks from the centre, waterfront sides evenly spread
+      - town–POI distance 352–637 blocks (median 496)
+      - world creation +1.5–2.5 s
+    - Test seed 20261029: town at (272, −160) facing east onto sea; POI at (−240, −240), 518 blocks away; both pass verification.
+    - Tests: 57 unit, 30 game.
+    - Open for the user: (1) town on the waterfront by default (chosen) or inland; (2) spawn at the town's edge instead of near the centre (player-visible, not changed).
 
 **Feature suppression (`06` §15):**
 - A tiny mixin on `PlacedFeature.place(WorldGenLevel, ChunkGenerator, RandomSource, BlockPos)`: if `isRpg(generator)` and the placed feature is in the denylist, return false.
