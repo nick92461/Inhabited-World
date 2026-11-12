@@ -57,6 +57,12 @@ loom.runs.named("gameTest") {
 	// Game tests pre-generate only the northernmost 14 chunk rows (the ocean ring and the map's northern edge) so
 	// builds stay quick; -PpregenRows=all runs the whole thing.
 	property "inhabited_world.dev.pregenRows", providers.gradleProperty("pregenRows").getOrElse("14")
+	// The planner's multi-seed survey (PlannerGameTests) plans a few seeds in every build; -PplannerSeeds=250 plans
+	// that many for each waterfront setting and writes build/reports/planner-survey.csv.
+	if (providers.gradleProperty("plannerSeeds").isPresent()) {
+		property "inhabited_world.dev.plannerSeeds", providers.gradleProperty("plannerSeeds").get()
+	}
+	property "inhabited_world.dev.reportDir", layout.buildDirectory.dir("reports").get().asFile.absolutePath
 }
 
 // Every game-test run starts from a freshly created world, as a player's new world would: world creation is what
