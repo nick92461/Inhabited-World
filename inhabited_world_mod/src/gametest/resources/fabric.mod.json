@@ -11,7 +11,8 @@
 			"io.github.nick92461.inhabitedworld.gametest.RpgWorldGameTests",
 			"io.github.nick92461.inhabitedworld.gametest.FiniteWorldGameTests",
 			"io.github.nick92461.inhabitedworld.gametest.IslandGameTests",
-			"io.github.nick92461.inhabitedworld.gametest.WorldContentGameTests"
+			"io.github.nick92461.inhabitedworld.gametest.WorldContentGameTests",
+			"io.github.nick92461.inhabitedworld.gametest.PlannerGameTests"
 		]
 	},
 	"mixins": [

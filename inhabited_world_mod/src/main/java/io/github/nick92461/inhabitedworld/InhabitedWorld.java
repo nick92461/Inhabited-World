@@ -3,6 +3,7 @@ package io.github.nick92461.inhabitedworld;
 import io.github.nick92461.inhabitedworld.spawn.SpawnPolicyCommand;
 import io.github.nick92461.inhabitedworld.worldgen.RpgWorlds;
 import io.github.nick92461.inhabitedworld.worldgen.pregen.Pregeneration;
+import io.github.nick92461.inhabitedworld.worldstate.WorldPlanCommand;
 
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
@@ -34,7 +35,10 @@ public class InhabitedWorld implements ModInitializer {
 
 		// Debug commands exist only in development runs (canon 10 section 60, Testing Workflow).
 		if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
-			CommandRegistrationCallback.EVENT.register((dispatcher, context, selection) -> SpawnPolicyCommand.register(dispatcher, context));
+			CommandRegistrationCallback.EVENT.register((dispatcher, context, selection) -> {
+				SpawnPolicyCommand.register(dispatcher, context);
+				WorldPlanCommand.register(dispatcher);
+			});
 		}
 	}
 
