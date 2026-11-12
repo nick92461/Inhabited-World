@@ -326,8 +326,13 @@ The user has downloaded worlds containing builds (a city) to use as the handcraf
   - Produce three zones: an exact mold, kept supporting terrain, and a blend margin.
   - Show a top-down preview with a few tunable thresholds, then round-trip paste the result into a test world.
 - NPC load: canon `03` separates NPC records from bodies (bodies only near players), so filling the city costs records plus scheduled inference rather than thousands of live entities. Still needs measuring (P4/P9).
+- **Decision (user, 2026-11-11): start with a piece of Drachenfels, and expand it only as far as the NPC limit allows.**
+  - v0.1 town = one district of Drachenfels sized for `09`'s ~6–10 significant NPCs, kept small enough to sit on the 1024×1024 island with room for wilderness and the external POI. This fits canon as written ("one small handcrafted town"), so no canon change is needed.
+  - The district is cut along natural seams (walls, streets, terrain) so it reads as a complete place, and its manifest records where the rest of the city would join, so later growth adds neighbouring districts rather than re-cutting the first.
+  - Growth gate: each further district is added only when measurements show the machine can carry the NPCs it needs (records, schedules, inference queue; P4/P9 tiers), without breaking the frame and latency budgets in `04`/`10`. Growing past the v0.1 map or town scope will need a canon proposal at that point.
+  - Track B1's first job is therefore: measure Drachenfels' real built extent, map its districts, and propose two or three candidate districts with their size and building count for the user to choose from.
 
-**Scope flag:** `09` §3 asks for "one small handcrafted town" with ~6–10 NPCs on a ~1024×1024 map. A large city may need trimming for v0.1, or a canon proposal to enlarge the town. The island shape must also hold its footprint on every seed, which favours coast option C.
+**Scope flag (resolved 2026-11-11 by the district decision above):** `09` §3 asks for "one small handcrafted town" with ~6–10 NPCs on a ~1024×1024 map; v0.1 uses one Drachenfels district, and enlarging later needs a canon proposal. The island shape must also hold its footprint on every seed, which favours coast option C.
 
 ### NPCs (`03` §18–19)
 The record is the person and holds a logical location (a semantic location ID). Bodies are reconciled against records, never saved as truth. Reputation is per player UUID.
