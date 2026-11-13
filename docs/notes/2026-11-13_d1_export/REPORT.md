@@ -44,8 +44,10 @@ our own placer (about a third of the size, and nothing to hold). It is not neede
 - **The box grew to 272 × 256** (z −1264…−1009). The survey's 272 × 224 cut a row of D1 houses on the north street
   (they reach z −1255) and the big hall in the south (z −1022). The box is chunk-aligned because the survey's
   rule B is per chunk. The stored area is the full box. Without the boardwalk that runs on into D2, D1's own
-  buildings span 272 × 236 (z −1256…−1021). **The planner's footprint needs the same change** (the main session
-  was told during the job).
+  buildings span 272 × 236 (z −1256…−1021). **Agreed with the main session on 2026-11-13**, and the planner was
+  told to use 272 × 256. The shore boardwalk is cut where it runs on into D2. The manifest's D2 join records where
+  it crosses the edge (`joins[0].continues`: template x 154–157, deck at template y 64), so D2 can pick it up
+  later.
 - **Ownership:** each built column belongs to the district of its building, using the survey's building map. Loose
   built columns (walls, lamps, railings) go with the nearest building. Other districts' buildings in the box are
   erased: air, or water below sea level next to open water.
@@ -104,5 +106,4 @@ manifest. A library building is cut one block under its lowest built block, so t
    (vanilla's own way, invisible text)? Both work; signs are the recommendation.
 2. **The moored ships:** keep them in the Harbour (they're part of its look, built from blocks, 37 "on water"
    pieces including the ships), or take them out of the town and keep them only as library parts?
-3. **The box:** 272 × 256 instead of 272 × 224. The planner needs that footprint, or a decision to trim D1.
-4. **Licensing** (still open from the survey): shipping Drachenfels' buildings needs the map maker's permission.
+3. **Licensing** (still open from the survey): shipping Drachenfels' buildings needs the map maker's permission.

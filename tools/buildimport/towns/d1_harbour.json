@@ -25,7 +25,9 @@
   "blend_border": 32,
   "overrides": {"keep": [], "drop": []},
   "joins": [
-    {"side": "north", "district": "D2", "name": "North Shore", "along": [128, 300]},
+    {"side": "north", "district": "D2", "name": "North Shore", "along": [128, 300],
+     "continues": [{"what": "shore boardwalk (catalog 129), cut at the box edge; D2 continues it north along the water",
+                    "along": [282, 285], "deck_y": 69}]},
     {"side": "west", "district": "D3", "name": "Castle Quarter", "along": [-1264, -1030]},
     {"side": "south", "district": "D8", "name": "Cathedral Quarter", "along": [128, 135]},
     {"side": "south", "district": "D9", "name": "Fishermen's Shore", "along": [135, 399]}

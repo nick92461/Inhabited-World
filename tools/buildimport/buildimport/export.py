@@ -580,7 +580,13 @@ def manifest(ex: Export, tiles: list, sid: str, version, total_bytes: int, colum
             a, b = a - cfg["original"]["box"][0], b - cfg["original"]["box"][0]
         else:
             a, b = a - cfg["original"]["box"][1], b - cfg["original"]["box"][1]
-        joins.append({**j, "along": [max(0, a), min((W if j["side"] in ("north", "south") else D) - 1, b)]})
+        limit = (W if j["side"] in ("north", "south") else D) - 1
+        off = cfg["original"]["box"][0] if j["side"] in ("north", "south") else cfg["original"]["box"][1]
+        # things cut by this edge that the neighbour continues (a boardwalk, a street): where they cross it
+        cont = [{**c, "along": [max(0, c["along"][0] - off), min(limit, c["along"][1] - off)],
+                 **({"deck_y": c["deck_y"] - (original["box_min"][1] if original else ex.y0)} if "deck_y" in c else {})}
+                for c in j.get("continues", [])]
+        joins.append({**j, "along": [max(0, a), min(limit, b)], **({"continues": cont} if cont else {})})
     return {
         "format": 1,
         "id": cfg["id"],

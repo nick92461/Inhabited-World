@@ -52,7 +52,14 @@
       "side": "north",
       "district": "D2",
       "name": "North Shore",
-      "along": [0, 172]
+      "along": [0, 172],
+      "continues": [
+        {
+          "what": "shore boardwalk (catalog 129), cut at the box edge; D2 continues it north along the water",
+          "along": [154, 157],
+          "deck_y": 64
+        }
+      ]
     },
     {
       "side": "west",
