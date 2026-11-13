@@ -401,7 +401,7 @@ The user has downloaded worlds containing builds (a city) to use as the handcraf
   - Coast: the sea lies **east** (777 m of seafront, running ~560 blocks N–S; piers up to 98 out; harbour 14–28 deep). The full city needs ~600 blocks of straight shoreline and ~840×745 of land, so it doesn't fit the 1024 island. It waits for the larger world.
   - Ten districts (D1–D10). **Recommended for v0.1: D1 Harbour**, 273×221, 121 buildings, capacity ~60 significant NPCs, on the waterfront, with D2/D3/D9 joining on three sides. Alternatives: D2 North Shore (~9 NPCs, little room to grow) or D9 Fishermen's Shore.
   - Planner changes if D1 is chosen:
-    - footprint 272×224 (17×14 chunks), template x 128…399, z −1248…−1025, with a 32-block blend border
+    - footprint 272×224 (17×14 chunks), template x 128…399, z −1248…−1025, with a 32-block blend border (later revised to 272×256, see below)
     - waterfront **required**, on the template's east side
     - a per-site waterfront strip of 112 blocks (currently a fixed 48 in `SiteEvaluator`)
     - relief limit ~32 (currently 24)
@@ -411,6 +411,47 @@ The user has downloaded worlds containing builds (a city) to use as the handcraf
     1. The demo island has the Harbour only.
     2. Further Drachenfels districts are added only while NPC demand keeps the game playable (measured in P4/P9). Neighbours D2/D3/D9 may fit the island; the full city (~840×745 plus coast) needs the larger world and a canon proposal.
     3. Other towns and cities are composed by design from cataloged Drachenfels buildings, laid out in workshop worlds and exported the same way.
+  - **Footprint revised 2026-11-13: 272×256** (17×16 chunks, x 128…399, z −1264…−1009). The survey box of 272×224 cut a row of D1 houses and the big hall, so the export uses the larger box. D1's own buildings span 272×236.
+- **D1 export BUILT and merged 2026-11-13 (3656af9 + a879abd, merge 10591ef).** Report: `docs/notes/2026-11-13_d1_export/REPORT.md`.
+  - The Harbour is in the mod's data:
+    - 72 structure templates (32×32 columns, 136 high), plus `columns.nbt` (the zones mold, support, sea and blend, each with floor and top) and `manifest.json`
+    - 1.63M blocks and 4,298 block entities, 5.1 MB in total
+    - the template's y 0 is placed at world y 2, so the town's sea lands on our y 63
+  - Round trip: Drachenfels → templates → pasted in game → read back matches 100%, block entities included.
+  - Workshop loop:
+    - `workshop.bat` opens a flat sea world with the town pasted in
+    - `export-town.bat` writes the edits back; an unedited round trip is byte-identical
+    - re-export is edit-aware
+    - markers are signs whose first line starts with `@name`, or data-mode structure blocks; six are seeded (quay, three piers, market square, main gate)
+  - Library export: `python -m buildimport building <id>`, with house 113 and ship 262 as samples.
+  - Dev command: `/inhabited town paste`.
+  - Tests: 60 pytest; TownManifestTest; 3 game tests (tile, whole-town round trip, workshop re-export).
+  - Erratum: the survey's palette reader read non-default block states as air. It is fixed in `anvil.block_key`. With correct data D1 has 160 buildings; the D1 decision stands. Re-tuning the survey on correct data is a follow-up.
+  - Phase 3 notes:
+    - load, place and drop tiles one at a time (~100 MB of heap if all are held)
+    - place with no neighbour or shape updates and no `onPlace`, ignoring waterlogging
+    - fill solid ground below each column's floor, and air above its top
+    - blend the seabed at the east edge
+    - the land part climbs ~30 blocks from the quay to the back street
+  - Open for the user:
+    1. markers as signs or as structure blocks (signs recommended)
+    2. keep the moored ships in the Harbour, or keep them only as library parts
+    3. licensing
+- **Planner v2 BUILT and merged 2026-11-13 (b24f992, merge c067237).**
+  - The town request is `inhabited_world:drachenfels/d1_harbour`:
+    - 272×256 plus a 32-block border
+    - sea side east, waterfront required
+    - a 112-block waterfront strip
+    - relief 32
+  - The planner tries all four rotations so the town's east side faces the sea, and records the rotation in the plan. A quarter turn swaps the sizes.
+  - WorldPlan data v4. Plans v2 and v3 read unchanged: no rotation and the old 48-block strip.
+  - New rule added by the session: at least 50% of the waterfront strip must already be open sea. Without it, piers landed on dry land on ~10% of seeds.
+  - 250 seeds: 232 strict, 18 looser terrain, 0 further. 72% of seeds rotate the town.
+  - Test seed 20261029: the town is centred at ~(256, −264) facing north (rotated counterclockwise 90°), 256×272; the strip is 51% sea; the POI is unchanged at (−240, −240).
+  - Tests: 84 unit and 38 game.
+  - Open for the user:
+    1. keep the 50%-sea rule (recommended: yes)
+    2. optionally let the town's sea side reach into the 32-block edge margin, which should raise the share of strict seeds and the sea in the strip
 - **Long-term vision (user, 2026-11-11; not canon yet, proposal for `11` offered):** a much larger finite world, about 5k×5k to 10k×10k or more. A town or city appears at planner-chosen sites, drawn per seed from a catalog of defined handcrafted settlements (the Drachenfels pieces and other imported builds); all terrain stays procedural under the charter.
   - Tension with `02` §6, which justifies pre-generating the whole map because the world is "small". At the measured ~155 chunks/s, a 5k map plus ocean ring is ~118k chunks (≈13 min) and a 10k map ~440k chunks (≈47 min, several GB on disk). Either creation gets much longer, or pre-generation becomes partial (settlement and POI regions first, the rest lazily or in the background); that choice needs its own canon change when the scale is taken up.
   - Building for it now costs little: keep the planner, the WorldPlan and the town manifest settlement-count-agnostic (a list of sites and a catalog of towns, with v0.1 using one entry), and keep `PlayableArea` versioned so a larger area is just a new version.
