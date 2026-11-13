@@ -175,3 +175,174 @@ def _infer(v) -> int:
 
 def encode_root(value: dict) -> bytes:
     return bytes([TAG_COMPOUND]) + _w_string("") + encode(value, TAG_COMPOUND)
+
+
+# ---- typed (lossless) reading and writing, for the exporter ----
+#
+# The plain parser above turns NBT into Python values and loses tag types (byte vs int, float vs double, an empty
+# list's element type). Block entities and entities must be copied into templates unchanged, so the exporter uses
+# this typed form: every value is a T(tag, value), where
+#     compound -> T(TAG_COMPOUND, {name: T})
+#     list     -> T(TAG_LIST, (element tag, [T, ...]))
+#     arrays   -> T(TAG_*_ARRAY, numpy array);  scalars and strings as themselves.
+# Mixed lists (1.21.5+, stored as compounds whose only key is "") are kept as they are, so writing is exact.
+
+
+class T:
+    __slots__ = ("tag", "value")
+
+    def __init__(self, tag: int, value):
+        self.tag = tag
+        self.value = value
+
+    def __repr__(self):
+        return f"T({self.tag}, {self.value!r})"
+
+    def __eq__(self, other):
+        if not isinstance(other, T) or other.tag != self.tag:
+            return False
+        if self.tag in _ARRAYS:
+            return np.array_equal(self.value, other.value)
+        return self.value == other.value
+
+    def __getitem__(self, key):
+        return self.value[key]
+
+    def get(self, key, default=None):
+        return self.value.get(key, default) if self.tag == TAG_COMPOUND else default
+
+    def plain(self):
+        """The plain-Python form of this value (as parse() returns it)."""
+        if self.tag == TAG_COMPOUND:
+            return {k: v.plain() for k, v in self.value.items()}
+        if self.tag == TAG_LIST:
+            items = [v.plain() for v in self.value[1]]
+            if self.value[0] == TAG_COMPOUND:
+                items = [i[""] if isinstance(i, dict) and len(i) == 1 and "" in i else i for i in items]
+            return items
+        return self.value
+
+
+class _TypedReader(_Reader):
+    def typed(self, tag: int) -> T:
+        buf = self.buf
+        if tag == TAG_COMPOUND:
+            out = {}
+            while True:
+                t = buf[self.pos]
+                self.pos += 1
+                if t == TAG_END:
+                    return T(TAG_COMPOUND, out)
+                name = self.string()
+                out[name] = self.typed(t)
+        if tag == TAG_LIST:
+            t = buf[self.pos]
+            (n,) = _INT.unpack_from(buf, self.pos + 1)
+            self.pos += 5
+            return T(TAG_LIST, (t, [self.typed(t) for _ in range(max(n, 0))]))
+        v = self.payload(tag)
+        if tag in _ARRAYS:
+            v = np.array(v)  # own copy, not a view of the chunk buffer
+        return T(tag, v)
+
+
+def parse_typed(data: bytes) -> T:
+    """Parse uncompressed NBT bytes (root compound) losslessly into T values."""
+    if data[0] != TAG_COMPOUND:
+        raise NbtError(f"root tag is {data[0]}, expected a compound")
+    r = _TypedReader(data)
+    r.pos = 1
+    r.string()
+    return r.typed(TAG_COMPOUND)
+
+
+def write_typed(t: T, out: bytearray) -> None:
+    """Append the payload of a typed value (no tag byte, no name)."""
+    tag = t.tag
+    s = _SCALARS.get(tag)
+    if s is not None:
+        out += s.pack(t.value)
+    elif tag == TAG_STRING:
+        out += _w_string(t.value)
+    elif tag == TAG_COMPOUND:
+        for k, v in t.value.items():
+            out.append(v.tag)
+            out += _w_string(k)
+            write_typed(v, out)
+        out.append(TAG_END)
+    elif tag == TAG_LIST:
+        et, items = t.value
+        out.append(et if items else (et or TAG_END))
+        out += _INT.pack(len(items))
+        for v in items:
+            write_typed(v, out)
+    elif tag in _ARRAYS:
+        dtype, _ = _ARRAYS[tag]
+        a = np.asarray(t.value).astype(dtype)
+        out += _INT.pack(len(a)) + a.tobytes()
+    else:
+        raise NbtError(f"cannot write tag {tag}")
+
+
+def canonical(t: T) -> T:
+    """A copy with every compound's keys sorted (recursively). Minecraft does not care about key order, but it
+    re-saves block entities in its own order; sorting makes exports byte-identical when nothing changed."""
+    if t.tag == TAG_COMPOUND:
+        return T(TAG_COMPOUND, {k: canonical(t.value[k]) for k in sorted(t.value)})
+    if t.tag == TAG_LIST:
+        et, items = t.value
+        return T(TAG_LIST, (et, [canonical(v) for v in items]))
+    return t
+
+
+def root_bytes(t: T) -> bytes:
+    """A complete NBT document: root compound with an empty name."""
+    out = bytearray([TAG_COMPOUND])
+    out += _w_string("")
+    write_typed(t, out)
+    return bytes(out)
+
+
+# small constructors for building typed values by hand
+def c(**kv) -> T:
+    return T(TAG_COMPOUND, dict(kv))
+
+
+def compound(d: dict) -> T:
+    return T(TAG_COMPOUND, dict(d))
+
+
+def s(v: str) -> T:
+    return T(TAG_STRING, v)
+
+
+def i(v: int) -> T:
+    return T(TAG_INT, int(v))
+
+
+def b(v: int) -> T:
+    return T(TAG_BYTE, int(v))
+
+
+def d(v: float) -> T:
+    return T(TAG_DOUBLE, float(v))
+
+
+def ints(*vs) -> T:
+    return T(TAG_LIST, (TAG_INT, [T(TAG_INT, int(v)) for v in vs]))
+
+
+def doubles(*vs) -> T:
+    return T(TAG_LIST, (TAG_DOUBLE, [T(TAG_DOUBLE, float(v)) for v in vs]))
+
+
+def lst(elem_tag: int, items) -> T:
+    return T(TAG_LIST, (elem_tag, list(items)))
+
+
+def int_array(a) -> T:
+    return T(TAG_INT_ARRAY, np.asarray(a, dtype=">i4"))
+
+
+def byte_array(a) -> T:
+    return T(TAG_BYTE_ARRAY, np.asarray(a, dtype=np.int8))

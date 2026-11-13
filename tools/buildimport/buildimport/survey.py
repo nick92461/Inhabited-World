@@ -510,7 +510,19 @@ def write_catalog(sv: A.Survey, path: str, where: dict, wf_mask: np.ndarray) -> 
 
 # ---------------------------------------------------------------- run
 
-def run(scan_path: str, outdir: str, districts_path: str | None = None, area_mode: str = "auto") -> dict:
+def save_labels(sv: A.Survey, path: str) -> None:
+    """The building map the exporter needs: building id per column, each building's district, sea and city masks.
+
+    Building ids are the catalog's ids (same scan, same rules => same ids)."""
+    ids = np.array([b.id for b in sv.buildings], np.int32)
+    dist = np.array(json.dumps({str(b.id): b.district for b in sv.buildings}))
+    np.savez_compressed(path, labels=sv.labels.astype(np.int32), x0=sv.scan.x0, z0=sv.scan.z0, ids=ids,
+                        districts=dist, sea=sv.sea, envelope=sv.envelope, sea_level=sv.sea_level,
+                        ground=sv.ground.astype(np.int16))
+
+
+def run(scan_path: str, outdir: str, districts_path: str | None = None, area_mode: str = "auto",
+        labels_path: str | None = None) -> dict:
     os.makedirs(outdir, exist_ok=True)
     scan = ScanResult.load(scan_path)
     sv = A.base_survey(scan, area_mode)
@@ -528,6 +540,8 @@ def run(scan_path: str, outdir: str, districts_path: str | None = None, area_mod
     top = topdown(sv)
     where = contact_sheets(sv, top, os.path.join(outdir, "catalog"))
     write_catalog(sv, os.path.join(outdir, "catalog.csv"), where, co["waterfront_mask"])
+    if labels_path:
+        save_labels(sv, labels_path)
     summary = summarise(sv, co, zones, dstats)
     with open(os.path.join(outdir, "summary.json"), "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2)

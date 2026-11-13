@@ -1,0 +1,43 @@
+{
+  "about": "Town export settings for D1 Harbour, the v0.1 town (user decision 2026-11-13). Coordinates under 'original', 'joins' and 'seed_markers' are the Drachenfels save's own block coordinates. See tools/buildimport/README.md.",
+  "id": "inhabited_world:drachenfels/d1_harbour",
+  "name": "D1 Harbour",
+  "resource_path": "towns/drachenfels/d1_harbour",
+  "version": 1,
+  "shipped": false,
+  "original": {
+    "world": "inhabited_world_mod/run/saves/Drachenfels",
+    "box": [128, -1264, 399, -1009],
+    "sea_level": 66,
+    "district": "D1",
+    "labels": "docs/notes/2026-11-12_drachenfels_survey/labels.npz"
+  },
+  "workshop": {
+    "world": "inhabited_world_mod/run/saves/workshop-d1_harbour",
+    "sea_level": 63
+  },
+  "target_sea_level": 63,
+  "waterfront": "east",
+  "tile": 32,
+  "support_depth": 4,
+  "support_apron": 8,
+  "courtyard_close": 12,
+  "blend_border": 32,
+  "overrides": {"keep": [], "drop": []},
+  "joins": [
+    {"side": "north", "district": "D2", "name": "North Shore", "along": [128, 300],
+     "continues": [{"what": "shore boardwalk (catalog 129), cut at the box edge; D2 continues it north along the water",
+                    "along": [282, 285], "deck_y": 69}]},
+    {"side": "west", "district": "D3", "name": "Castle Quarter", "along": [-1264, -1030]},
+    {"side": "south", "district": "D8", "name": "Cathedral Quarter", "along": [128, 135]},
+    {"side": "south", "district": "D9", "name": "Fishermen's Shore", "along": [135, 399]}
+  ],
+  "seed_markers": [
+    {"id": "d1_quay", "at": [280, -1180], "yaw": 270, "note": "middle of the quay, facing the sea"},
+    {"id": "d1_pier_north", "at": [300, -1212], "yaw": 270, "note": "north pier, near its landward end"},
+    {"id": "d1_pier_middle", "at": [330, -1140], "yaw": 270, "note": "middle pier"},
+    {"id": "d1_pier_south", "at": [365, -1048], "yaw": 270, "note": "south pier, off the dockyard"},
+    {"id": "d1_market_square", "at": [167, -1108], "yaw": 0, "note": "largest open square in the district (upper town)"},
+    {"id": "d1_main_gate", "at": [130, -1165], "yaw": 270, "note": "main street entry from the Castle Quarter (no gate building here)"}
+  ]
+}

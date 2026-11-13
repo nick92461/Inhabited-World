@@ -13,7 +13,8 @@
 			"io.github.nick92461.inhabitedworld.gametest.IslandGameTests",
 			"io.github.nick92461.inhabitedworld.gametest.WorldContentGameTests",
 			"io.github.nick92461.inhabitedworld.gametest.PlannerGameTests",
-			"io.github.nick92461.inhabitedworld.gametest.RegionGameTests"
+			"io.github.nick92461.inhabitedworld.gametest.RegionGameTests",
+			"io.github.nick92461.inhabitedworld.gametest.TownTemplateGameTests"
 		]
 	},
 	"mixins": [

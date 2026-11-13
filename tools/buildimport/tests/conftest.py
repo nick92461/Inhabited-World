@@ -80,3 +80,59 @@ def region_bytes(chunks: dict) -> bytes:
         body += payload
         sector += n
     return bytes(header + body)
+
+
+# ---- whole synthetic worlds in the 26.x format, for the exporter tests ----
+
+def palette_entry_26(key: str):
+    """'minecraft:x' -> bare string (26.x default state); 'minecraft:x[a=1]' -> {id, properties} (26.x)."""
+    if "[" not in key:
+        return key
+    name, rest = key[:-1].split("[", 1)
+    return {"id": name, "properties": dict(kv.split("=", 1) for kv in rest.split(","))}
+
+
+def write_world(folder: str, cells: dict, block_entities: list = (), entities: list = (), y_sections=range(-1, 8)):
+    """A world folder (26.x layout: dimensions/minecraft/overworld/{region,entities}) holding cells
+    {(x, y, z): block key}; everything else air. block_entities: compounds with x, y, z, id (plain values or
+    (tag, value)). entities: compounds with id and Pos [x, y, z] doubles. Every chunk with a cell is written in full."""
+    region = os.path.join(folder, "dimensions", "minecraft", "overworld", "region")
+    ent_dir = os.path.join(folder, "dimensions", "minecraft", "overworld", "entities")
+    os.makedirs(region, exist_ok=True)
+    os.makedirs(ent_dir, exist_ok=True)
+    chunks = {}
+    for (x, y, z), k in cells.items():
+        chunks.setdefault((x >> 4, z >> 4), {})[(x & 15, y, z & 15)] = k
+    by_region: dict = {}
+    for (cx, cz), cc in chunks.items():
+        sections = []
+        for sy in y_sections:
+            local = {(x, y - sy * 16, z): k for (x, y, z), k in cc.items() if sy * 16 <= y < sy * 16 + 16}
+            keys = ["minecraft:air"] + sorted(set(local.values()) - {"minecraft:air"})
+            idx = np.zeros((16, 16, 16), np.int64)
+            for (x, y, z), k in local.items():
+                idx[y, z, x] = keys.index(k)
+            sections.append(section_26(sy, idx, [palette_entry_26(k) for k in keys]))
+        bes = [b for b in block_entities if (b["x"] >> 4, b["z"] >> 4) == (cx, cz)]
+        root = {"DataVersion": 5023, "xPos": cx, "zPos": cz, "yPos": min(y_sections), "Status": "minecraft:full",
+                "sections": sections}
+        if bes:
+            root["block_entities"] = list(bes)
+        by_region.setdefault((cx >> 5, cz >> 5), {})[(cx & 31, cz & 31)] = nbt.encode_root(root)
+    for (rx, rz), cs in by_region.items():
+        with open(os.path.join(region, f"r.{rx}.{rz}.mca"), "wb") as f:
+            f.write(region_bytes(cs))
+    ents: dict = {}
+    for e in entities:
+        x, _, z = e["Pos"]
+        cx, cz = int(np.floor(x[1] if isinstance(x, tuple) else x)) >> 4, int(np.floor(z[1] if isinstance(z, tuple) else z)) >> 4
+        ents.setdefault((cx, cz), []).append(e)
+    by_region = {}
+    for (cx, cz), es in ents.items():
+        root = {"DataVersion": 5023, "Position": (nbt.TAG_INT_ARRAY, np.array([cx, cz])), "Entities": es}
+        by_region.setdefault((cx >> 5, cz >> 5), {})[(cx & 31, cz & 31)] = nbt.encode_root(root)
+    for (rx, rz), cs in by_region.items():
+        with open(os.path.join(ent_dir, f"r.{rx}.{rz}.mca"), "wb") as f:
+            f.write(region_bytes(cs))
+    with open(os.path.join(folder, "level.dat"), "wb") as f:
+        f.write(b"")
