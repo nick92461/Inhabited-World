@@ -406,7 +406,11 @@ The user has downloaded worlds containing builds (a city) to use as the handcraf
     - a per-site waterfront strip of 112 blocks (currently a fixed 48 in `SiteEvaluator`)
     - relief limit ~32 (currently 24)
   - Exporter must-keep: the map maker painted the seabed and rocks with cobblestone, mossy cobblestone and smooth sandstone. `rules.py` treats these as terrain.
-  - **Open for the user:** choose the v0.1 district. D1 is larger than `09`'s "small town" in buildings, but only 6–10 NPCs are significant and the rest of the town can be quiet; flag this when choosing.
+  - **Decided 2026-11-13 (user): v0.1's town is D1 Harbour.** Only 6–10 of its NPCs are significant (`09` §3); the rest of the Harbour can stay quiet. The planner takes D1's footprint and settings above.
+  - User's summary of the path, confirmed:
+    1. The demo island has the Harbour only.
+    2. Further Drachenfels districts are added only while NPC demand keeps the game playable (measured in P4/P9). Neighbours D2/D3/D9 may fit the island; the full city (~840×745 plus coast) needs the larger world and a canon proposal.
+    3. Other towns and cities are composed by design from cataloged Drachenfels buildings, laid out in workshop worlds and exported the same way.
 - **Long-term vision (user, 2026-11-11; not canon yet, proposal for `11` offered):** a much larger finite world, about 5k×5k to 10k×10k or more. A town or city appears at planner-chosen sites, drawn per seed from a catalog of defined handcrafted settlements (the Drachenfels pieces and other imported builds); all terrain stays procedural under the charter.
   - Tension with `02` §6, which justifies pre-generating the whole map because the world is "small". At the measured ~155 chunks/s, a 5k map plus ocean ring is ~118k chunks (≈13 min) and a 10k map ~440k chunks (≈47 min, several GB on disk). Either creation gets much longer, or pre-generation becomes partial (settlement and POI regions first, the rest lazily or in the background); that choice needs its own canon change when the scale is taken up.
   - Building for it now costs little: keep the planner, the WorldPlan and the town manifest settlement-count-agnostic (a list of sites and a catalog of towns, with v0.1 using one entry), and keep `PlayableArea` versioned so a larger area is just a new version.
