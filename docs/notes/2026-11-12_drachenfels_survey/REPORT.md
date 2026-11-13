@@ -1,5 +1,16 @@
 # Drachenfels survey (Track B1, job 1)
 
+> **Erratum (2026-11-13, found by Track B1 job 2).** The survey's palette reader dropped every 26.x block state that
+> is not a block's default: 26.3 writes those as `{id, properties}`, the reader expected `{Name, Properties}`, so
+> stairs, slabs, doors, fences, beds, sideways logs and the like were read as **air**. The building outlines here
+> still hold up, because the walls and roofs are mostly full blocks, and the D1 decision stands: re-measured with
+> the fix, D1 has 160 buildings, 131 homes and workplaces, and its height range is y 34–140. But counts of doors
+> (271 → 3,973), beds and workstations, and the building split in the dense core (D6, D7, D10), change a lot. The
+> splitter's thresholds were tuned on the faulty data, so re-running the survey as it stands merges many terraces.
+> The reader is fixed in `tools/buildimport` (`anvil.block_key`). The catalog and figures below are left as they
+> were; the building map behind the catalog is frozen in `labels.npz`, so catalog ids stay valid. Re-tuning the
+> survey on correct data is a follow-up.
+
 **In short:**
 - Drachenfels is a coastal city with mountains to the north, farmland and forest to the west and south, and open sea along its whole east side. Its built core is about **760 × 665 blocks** (0.29 km²) and holds roughly **1,000 buildings**.
 - It splits cleanly along its streets into **10 districts**.

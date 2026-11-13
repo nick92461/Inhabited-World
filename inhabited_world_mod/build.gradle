@@ -36,6 +36,14 @@ loom {
 			configName = "Minecraft Client (fresh test world)"
 			property "inhabited_world.dev.testWorld", providers.gradleProperty("testWorld").getOrElse("rpg")
 		}
+
+		// A town's workshop world (workshop.bat at the workspace root): opens saves/workshop-<town>, creating it
+		// with the town pasted in on the first run. -Ptown=d1_harbour picks the town.
+		workshop {
+			inherit loom.runs.client
+			configName = "Minecraft Client (town workshop)"
+			property "inhabited_world.dev.workshop", providers.gradleProperty("town").getOrElse("d1_harbour")
+		}
 	}
 }
 

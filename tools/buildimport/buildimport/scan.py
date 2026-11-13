@@ -99,36 +99,29 @@ class ChunkResult:
     runs: np.ndarray         # (n, 6) int16: local col, floor_y, height, furnish, lights, ceiling_y
 
 
-def analyse_chunk(chunk: anvil.Chunk, keys: KeyTable) -> ChunkResult | None:
-    """Classify one chunk's blocks and reduce them to column statistics and room slices."""
-    secs = [s for s in chunk.sections]
-    if not secs:
-        return None
-    sy0 = min(s.y for s in secs)
-    sy1 = max(s.y for s in secs)
-    ny = (sy1 - sy0 + 1) * 16
-    ybase = sy0 * 16
-    vol = np.zeros((ny, 256), np.uint16)  # air id is 0
-    any_block = False
-    for s in secs:
-        pal = np.fromiter((keys.id(k) for k in s.palette), np.uint16, len(s.palette))
-        r0 = (s.y - sy0) * 16
-        if s.indices is None:
-            if pal[0] != 0:
-                vol[r0:r0 + 16] = pal[0]
-                any_block = True
-        else:
-            vol[r0:r0 + 16] = pal[s.indices.astype(np.intp)].reshape(16, 256)
-            any_block = True
-    if not any_block:
-        return None
+@dataclass
+class Classified:
+    """Per-block classes of one chunk volume (y, 256), after the terrain-paint and attached rules."""
+    cls: np.ndarray       # rules class per block (terrain paint already turned NATURAL)
+    fluid: np.ndarray
+    placed: np.ndarray    # PLACED / FURNISHING / LIGHT
+    natural: np.ndarray
+    terrain: np.ndarray   # natural ground (not tree trunks): what "the ground" is made of
+    built: np.ndarray     # part of a build: placed, or natural attached by rule A or B
 
+
+def classify_volume(vol: np.ndarray, keys: KeyTable) -> Classified:
+    """Apply rules.py to one chunk's blocks. vol is (y, 256) of KeyTable ids, column index z*16 + x.
+
+    The survey and the exporter both call this, so a block is "built" for the export exactly when the survey
+    counted it as built. Rule B uses a per-chunk ground level, so results depend on chunk boundaries: exports keep
+    the source's chunk alignment."""
+    ny = vol.shape[0]
     cls = keys.cls[vol].copy()
     fluid = cls == rules.FLUID
     _terrain_paint(cls, keys.paint[vol], fluid)
     placed = cls >= rules.PLACED
     natural = cls == rules.NATURAL
-    nonair = cls != rules.AIR
     yidx = np.arange(ny)[:, None]
 
     # rule A: natural at or above the lowest placed block of its column
@@ -155,6 +148,37 @@ def analyse_chunk(chunk: anvil.Chunk, keys: KeyTable) -> ChunkResult | None:
         chunk_ground = -1
     rule_b = natural & adj & (yidx > chunk_ground + rules.ATTACH_MIN_ABOVE_GROUND)
     built = placed | rule_a | rule_b
+    return Classified(cls, fluid, placed, natural, terrain, built)
+
+
+def analyse_chunk(chunk: anvil.Chunk, keys: KeyTable) -> ChunkResult | None:
+    """Classify one chunk's blocks and reduce them to column statistics and room slices."""
+    secs = [s for s in chunk.sections]
+    if not secs:
+        return None
+    sy0 = min(s.y for s in secs)
+    sy1 = max(s.y for s in secs)
+    ny = (sy1 - sy0 + 1) * 16
+    ybase = sy0 * 16
+    vol = np.zeros((ny, 256), np.uint16)  # air id is 0
+    any_block = False
+    for s in secs:
+        pal = np.fromiter((keys.id(k) for k in s.palette), np.uint16, len(s.palette))
+        r0 = (s.y - sy0) * 16
+        if s.indices is None:
+            if pal[0] != 0:
+                vol[r0:r0 + 16] = pal[0]
+                any_block = True
+        else:
+            vol[r0:r0 + 16] = pal[s.indices.astype(np.intp)].reshape(16, 256)
+            any_block = True
+    if not any_block:
+        return None
+
+    k = classify_volume(vol, keys)
+    cls, fluid, placed, natural, terrain, built = k.cls, k.fluid, k.placed, k.natural, k.terrain, k.built
+    nonair = cls != rules.AIR
+    yidx = np.arange(ny)[:, None]
 
     passable = keys.passable[vol]
     floor_ok = ~passable & ~fluid

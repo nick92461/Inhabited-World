@@ -121,13 +121,18 @@ KEPT_PROPERTIES = (("_leaves", "persistent"), ("_bed", "part"), ("_log", "axis")
 def block_key(entry) -> str:
     """'minecraft:oak_leaves[persistent=true]' style key for a palette entry; namespace kept, most properties dropped.
 
-    A palette entry is a compound {Name, Properties} or, in 26.x saves, a plain string for a state without
-    properties.
+    A palette entry is a compound {Name, Properties} (1.13-1.21), or in 26.x saves either a plain string for a
+    block's default state or a compound {id, properties} for any other state.
     """
     if isinstance(entry, str):
         return entry if ":" in entry else "minecraft:" + entry
-    name = entry.get("Name", "minecraft:air")
-    props = entry.get("Properties")
+    if len(entry) == 1 and "" in entry:
+        return block_key(entry[""])
+    # 26.x writes {id, properties}; 1.13-1.21 wrote {Name, Properties}
+    name = entry.get("Name") or entry.get("id") or "minecraft:air"
+    if ":" not in name:
+        name = "minecraft:" + name
+    props = entry.get("Properties") or entry.get("properties")
     if props:
         kept = [f"{k}={props[k]}" for suffix, k in KEPT_PROPERTIES if name.endswith(suffix) and k in props]
         if kept:

@@ -1,0 +1,68 @@
+{
+  "format": 1,
+  "id": "inhabited_world:drachenfels/building_113",
+  "version": 1,
+  "template": "inhabited_world:library/drachenfels/building_113/v1",
+  "catalog": {
+    "id": "113",
+    "district": "D1",
+    "type": "house",
+    "storeys": "2.8",
+    "workstations": "7",
+    "doors": "3",
+    "waterfront": "0"
+  },
+  "source": {
+    "world": "inhabited_world_mod/run/saves/Drachenfels",
+    "box_min": [154, 87, -1254]
+  },
+  "size": [13, 47, 13],
+  "footprint": {
+    "width_x": 13,
+    "depth_z": 13,
+    "columns": 136,
+    "rows": [
+      "...##########",
+      "...##########",
+      "...##########",
+      "...##########",
+      "#############",
+      "############.",
+      "############.",
+      ".###########.",
+      "############.",
+      "############.",
+      "############.",
+      ".###########.",
+      "...........#."
+    ]
+  },
+  "ground": {
+    "median": 0,
+    "range": [0, 12],
+    "note": "template y of the ground the building stood on in its source"
+  },
+  "entrance": {
+    "side": "S",
+    "basis": "doors",
+    "doors": [
+      [11, 19, 9],
+      [9, 26, 8],
+      [11, 38, 8],
+      [11, 38, 10],
+      [11, 38, 12],
+      [7, 5, 2],
+      [8, 19, 2],
+      [4, 15, 8],
+      [4, 5, 7],
+      [6, 19, 2]
+    ]
+  },
+  "markers": [],
+  "stats": {
+    "blocks": 5188,
+    "non_air": 3247,
+    "block_entities": 59,
+    "bytes": 19501
+  }
+}
