@@ -25,9 +25,8 @@ import net.minecraft.core.Direction;
 // Turning planned sites into semantic regions (canon 02 section 6, 06 sections 17.1 and 17.4).
 class SiteRegionsTest {
     static PlannedSite town(SiteMetrics ground) {
-        BlockRect bounds = BlockRect.ofSize(144, -288, 256, 256);
-        return new PlannedSite(V01Sites.TOWN, SiteKind.SETTLEMENT, V01Sites.TOWN_CATALOG_ID,
-                new SiteRules(V01Sites.TOWN_FOOTPRINT, Waterfront.PREFERRED, V01Sites.TOWN_TERRAIN, 0), bounds, bounds.inflate(32),
+        BlockRect bounds = BlockRect.ofSize(144, -288, 272, 256);
+        return new PlannedSite(V01Sites.TOWN, SiteKind.SETTLEMENT, V01Sites.TOWN_CATALOG_ID, V01Sites.townRules(Waterfront.REQUIRED), bounds, bounds.inflate(32),
                 Optional.of(Direction.EAST), ground);
     }
 

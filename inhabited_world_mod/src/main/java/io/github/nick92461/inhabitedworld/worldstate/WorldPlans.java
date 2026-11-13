@@ -64,7 +64,8 @@ public final class WorldPlans {
         for (PlannedSite site : plan.sites()) {
             InhabitedWorld.LOGGER.info("[{}]   {} ({} {}): centre {}, {}; bounds {}; region {}{}; predicted {}", InhabitedWorld.MOD_ID,
                     site.id(), site.kind().getSerializedName(), site.catalogId(), site.centerX(), site.centerZ(), site.bounds(), site.region(),
-                    site.waterfront().map(d -> "; waterfront faces " + d.getName()).orElse(""), site.predicted().describe());
+                    site.waterfront().map(d -> "; waterfront faces " + d.getName()).orElse("") + "; rotation " + site.rotation().getSerializedName(),
+                    site.predicted().describe());
         }
         if (planning.outcome().run().relaxation() > 0) {
             InhabitedWorld.LOGGER.warn("[{}] this seed needed the planner's fallback step {} ({}): see the plan's recorded rules",

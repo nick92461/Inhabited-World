@@ -12,6 +12,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -93,6 +94,14 @@ public class PlannerGameTests {
             helper.assertTrue(site.region().equals(site.bounds().inflate(site.rules().footprint().blend())), site.id() + "'s region is its bounds plus the blend border");
         }
         helper.assertFalse(town.region().intersects(poi.region()), "the town and POI regions must not overlap");
+        helper.assertTrue(town.catalogId().equals(V01Sites.TOWN_CATALOG_ID), "the town is Drachenfels' Harbour, got " + town.catalogId());
+        if (plan.planner().get().relaxation() < SitePlanner.LAST_RESORT) {
+            helper.assertTrue(town.waterfront().isPresent(), "the Harbour's waterfront is required");
+            helper.assertTrue(town.rotation().rotate(V01Sites.TOWN_SEA_SIDE) == town.waterfront().get(),
+                    "the rotation " + town.rotation().getSerializedName() + " turns the Harbour's east side to its " + town.waterfront().get().getName() + " waterfront");
+        }
+        helper.assertTrue(town.bounds().sizeX() * town.bounds().sizeZ() == V01Sites.TOWN_FOOTPRINT.sizeX() * V01Sites.TOWN_FOOTPRINT.sizeZ()
+                && Math.max(town.bounds().sizeX(), town.bounds().sizeZ()) == 272, "the town's bounds are the 272 x 256 Harbour, turned: " + town.bounds());
         if (plan.planner().get().relaxation() < SitePlanner.LOOSER_LAYOUT) {
             helper.assertTrue(town.region().gapTo(poi.region()) >= V01Sites.MIN_WILDERNESS_GAP, "at least " + V01Sites.MIN_WILDERNESS_GAP + " blocks of wilderness between them");
             helper.assertTrue(town.bounds().centerDistanceTo(poi.bounds()) <= V01Sites.MAX_CENTER_DISTANCE, "at most " + V01Sites.MAX_CENTER_DISTANCE + " blocks apart");
@@ -142,7 +151,7 @@ public class PlannerGameTests {
                 new SiteRules(V01Sites.POI_FOOTPRINT, Waterfront.NONE, V01Sites.POI_TERRAIN, 0), bounds, bounds.inflate(16), Optional.empty(),
                 new SiteMetrics(1.0, 0, 70, 0.0, Optional.empty()));
         TerrainGrid grid = TerrainGrid.sample(new GeneratedTerrainSampler((cx, cz) -> level.getChunk(cx, cz)), SiteVerifier.sampledArea(onSea));
-        SiteMetrics generated = SiteEvaluator.measure(grid, bounds, null);
+        SiteMetrics generated = SiteEvaluator.measure(grid, onSea);
         List<String> problems = SiteVerifier.judge(onSea, generated);
         helper.assertTrue(generated.land() == 0.0, "control: the ring north of the map is open sea, but measured " + generated.describe());
         helper.assertFalse(problems.isEmpty(), "verification must fail a site on open sea");
@@ -151,14 +160,37 @@ public class PlannerGameTests {
 
     /*
       The multi-seed survey: plans many seeds of rpg_overworld_v2 from noise alone and reports how often each fallback
-      step was needed and where sites land. A normal build plans SURVEY_DEFAULT seeds; -PplannerSeeds=N plans N seeds
-      for each waterfront setting and writes a CSV. Every seed must get both sites (the last resort guarantees it),
-      and in the default build every surveyed seed must be planned without falling back past looser terrain.
+      step was needed and where sites land. A normal build plans SURVEY_DEFAULT seeds with the request new worlds get;
+      -PplannerSeeds=N plans N seeds for each variant below and writes a CSV. Every seed must get both sites (the last
+      resort guarantees it), and in the default build every surveyed seed must be planned without falling back past
+      looser terrain.
+
+      Variants (the first is what a new world asks for; the others show what each rule costs):
+      - required: the town's waterfront REQUIRED, with every waterfront rule (V01Sites)
+      - required_no_strip_sea: the same without the rule that the waterfront strip holds sea
+      - preferred, none: the town's waterfront PREFERRED or not asked for
      */
     private static final int SURVEY_DEFAULT = 6;
 
+    private record Variant(String name, PlanRequest request) {
+    }
+
+    private static List<Variant> variants(boolean full) {
+        PlanRequest world = V01Sites.request(PlayableArea.V0_1);
+        if (!full) {
+            return List.of(new Variant("required", world));
+        }
+        SiteRules town = world.sites().get(0).rules();
+        SiteRules noStripSea = new SiteRules(town.footprint(), town.waterfront(), town.seaSide(), town.waterfrontDepth(), 0.0, town.limits(), town.spawnClearance());
+        return List.of(
+                new Variant("required", world),
+                new Variant("required_no_strip_sea", world.with(List.of(world.sites().get(0).withRules(noStripSea), world.sites().get(1)), world.spacings())),
+                new Variant("preferred", V01Sites.request(PlayableArea.V0_1, Waterfront.PREFERRED)),
+                new Variant("none", V01Sites.request(PlayableArea.V0_1, Waterfront.NONE)));
+    }
+
     /** One seed's plan; for a seed that needed a fallback step, whether each site alone already failed the strict rules. */
-    private record Row(long seed, Waterfront mode, SitePlanner.Outcome outcome, long samplingMillis, long planningMillis,
+    private record Row(long seed, String variant, SitePlanner.Outcome outcome, long samplingMillis, long planningMillis,
                        boolean townAloneFails, boolean poiAloneFails) {
     }
 
@@ -168,7 +200,7 @@ public class PlannerGameTests {
         int count = property == null ? SURVEY_DEFAULT : Integer.parseInt(property);
         boolean full = property != null;
         long[] seeds = surveySeeds(count);
-        Waterfront[] modes = full ? Waterfront.values() : new Waterfront[]{V01Sites.TOWN_WATERFRONT};
+        List<Variant> variants = variants(full);
 
         ServerLevel level = helper.getLevel();
         Holder<NoiseGeneratorSettings> settings = level.registryAccess().lookupOrThrow(Registries.NOISE_SETTINGS).getOrThrow(RpgWorlds.NOISE_SETTINGS_V2);
@@ -185,8 +217,8 @@ public class PlannerGameTests {
                 futures.add(pool.submit(() -> {
                     RandomState random = RandomState.create(noises, seed, settings.value());
                     List<Row> perSeed = new ArrayList<>();
-                    for (Waterfront mode : modes) {
-                        PlanRequest request = V01Sites.request(PlayableArea.V0_1, mode);
+                    for (Variant variant : variants) {
+                        PlanRequest request = variant.request();
                         NoisePlanning.Timed timed = NoisePlanning.plan(generator, random, seed, heights, request);
                         boolean townFails = false;
                         boolean poiFails = false;
@@ -195,7 +227,7 @@ public class PlannerGameTests {
                             townFails = SitePlanner.plan(request.with(List.of(request.sites().get(0)), List.of()), timed.grid(), seed, spawn).run().relaxation() > 0;
                             poiFails = SitePlanner.plan(request.with(List.of(request.sites().get(1)), List.of()), timed.grid(), seed, spawn).run().relaxation() > 0;
                         }
-                        perSeed.add(new Row(seed, mode, timed.outcome(), timed.samplingMillis(), timed.planningMillis(), townFails, poiFails));
+                        perSeed.add(new Row(seed, variant.name(), timed.outcome(), timed.samplingMillis(), timed.planningMillis(), townFails, poiFails));
                     }
                     return perSeed;
                 }));
@@ -210,15 +242,15 @@ public class PlannerGameTests {
 
         for (Row row : rows) {
             helper.assertTrue(row.outcome().sites().size() == 2, "seed " + row.seed() + " must get both sites");
-            if (row.mode() == V01Sites.TOWN_WATERFRONT && !full) {
+            if (!full) {
                 helper.assertTrue(row.outcome().run().relaxation() <= SitePlanner.LOOSER_TERRAIN,
                         "seed " + row.seed() + " needed fallback step " + row.outcome().run().relaxation());
             }
         }
-        for (Waterfront mode : modes) {
-            LOGGER.info("planner survey, town waterfront {}: {}", mode.getSerializedName(), summary(rows.stream().filter(r -> r.mode() == mode).toList()));
+        for (Variant variant : variants) {
+            LOGGER.info("planner survey, {}: {}", variant.name(), summary(rows.stream().filter(r -> r.variant().equals(variant.name())).toList()));
         }
-        LOGGER.info("planner survey: {} seeds x {} settings in {} ms ({} worker threads)", seeds.length, modes.length, millis,
+        LOGGER.info("planner survey: {} seeds x {} variants in {} ms ({} worker threads)", seeds.length, variants.size(), millis,
                 Math.max(1, Runtime.getRuntime().availableProcessors() - 1));
         if (full) {
             writeCsv(rows);
@@ -239,7 +271,11 @@ public class PlannerGameTests {
     private static String summary(List<Row> rows) {
         int[] steps = new int[SitePlanner.LAST_RESORT + 1];
         Map<Direction, Integer> facing = new EnumMap<>(Direction.class);
+        Map<String, Integer> rotations = new TreeMap<>();
         int inland = 0;
+        List<Double> stripSea = new ArrayList<>();
+        List<Double> seaBeyond = new ArrayList<>();
+        double[] relief = new double[rows.size()];
         double[] townFromCentre = new double[rows.size()];
         double[] apart = new double[rows.size()];
         double[] gap = new double[rows.size()];
@@ -265,6 +301,10 @@ public class PlannerGameTests {
             } else {
                 inland++;
             }
+            rotations.merge(town.rotation().getSerializedName(), 1, Integer::sum);
+            town.predicted().stripSea().ifPresent(stripSea::add);
+            town.predicted().sea().ifPresent(seaBeyond::add);
+            relief[k] = town.predicted().relief();
             townFromCentre[k] = Math.hypot(town.bounds().centerX(), town.bounds().centerZ());
             poiFromCentre[k] = Math.hypot(poi.bounds().centerX(), poi.bounds().centerZ());
             apart[k] = town.bounds().centerDistanceTo(poi.bounds());
@@ -275,10 +315,16 @@ public class PlannerGameTests {
         }
         return String.format(Locale.ROOT,
                 "%d seeds; fallback steps strict/looser terrain/looser layout/last resort = %s (of the fallbacks: town alone fails strict %d, POI alone %d, only together %d); town waterfront facing %s, inland %d; "
+                        + "town rotation %s; town strip sea %s; town sea beyond %s; town relief %s; "
                         + "town quadrants NW/NE/SW/SE = %s; town centre from map centre %s; POI centre from map centre %s; "
                         + "town-POI centre distance %s; wilderness gap %s; mean sampling %d ms, planning %d ms per seed",
-                rows.size(), Arrays.toString(steps), townAlone, poiAlone, together, facing, inland, Arrays.toString(quadrant), stats(townFromCentre), stats(poiFromCentre),
+                rows.size(), Arrays.toString(steps), townAlone, poiAlone, together, facing, inland, rotations, stats(unbox(stripSea)), stats(unbox(seaBeyond)),
+                stats(relief), Arrays.toString(quadrant), stats(townFromCentre), stats(poiFromCentre),
                 stats(apart), stats(gap), rows.isEmpty() ? 0 : sampling / rows.size(), rows.isEmpty() ? 0 : planning / rows.size());
+    }
+
+    private static double[] unbox(List<Double> values) {
+        return values.stream().mapToDouble(Double::doubleValue).toArray();
     }
 
     private static String stats(double[] values) {
@@ -287,7 +333,7 @@ public class PlannerGameTests {
         }
         double[] sorted = values.clone();
         Arrays.sort(sorted);
-        return String.format(Locale.ROOT, "min %.0f / p10 %.0f / median %.0f / p90 %.0f / max %.0f", sorted[0], sorted[(int) (0.1 * (sorted.length - 1))],
+        return String.format(Locale.ROOT, "min %.4g / p10 %.4g / median %.4g / p90 %.4g / max %.4g", sorted[0], sorted[(int) (0.1 * (sorted.length - 1))],
                 sorted[(sorted.length - 1) / 2], sorted[(int) Math.ceil(0.9 * (sorted.length - 1))], sorted[sorted.length - 1]);
     }
 
@@ -295,15 +341,17 @@ public class PlannerGameTests {
         File file = new File(System.getProperty("inhabited_world.dev.reportDir", "."), "planner-survey.csv");
         file.getParentFile().mkdirs();
         try (PrintWriter out = new PrintWriter(file, StandardCharsets.UTF_8)) {
-            out.println("seed,town_waterfront_setting,fallback_step,town_x,town_z,town_facing,town_land,town_relief,town_median_y,town_sea,"
-                    + "poi_x,poi_z,poi_land,poi_relief,poi_median_y,centre_distance,wilderness_gap,candidates,sampling_ms,planning_ms");
+            out.println("seed,variant,fallback_step,town_x,town_z,town_facing,town_rotation,town_size_x,town_size_z,town_land,town_relief,town_median_y,"
+                    + "town_strip_sea,town_sea,poi_x,poi_z,poi_land,poi_relief,poi_median_y,centre_distance,wilderness_gap,candidates,sampling_ms,planning_ms");
             for (Row row : rows) {
                 PlannedSite town = row.outcome().sites().get(0);
                 PlannedSite poi = row.outcome().sites().get(1);
-                out.println(String.format(Locale.ROOT, "%d,%s,%d,%d,%d,%s,%.3f,%d,%d,%s,%d,%d,%.3f,%d,%d,%.0f,%.0f,%d,%d,%d", row.seed(),
-                        row.mode().getSerializedName(), row.outcome().run().relaxation(), town.centerX(), town.centerZ(),
-                        town.waterfront().map(Direction::getName).orElse("inland"), town.predicted().land(), town.predicted().relief(),
-                        town.predicted().medianY(), town.predicted().sea().map(s -> String.format(Locale.ROOT, "%.3f", s)).orElse(""),
+                out.println(String.format(Locale.ROOT, "%d,%s,%d,%d,%d,%s,%s,%d,%d,%.3f,%d,%d,%s,%s,%d,%d,%.3f,%d,%d,%.0f,%.0f,%d,%d,%d", row.seed(),
+                        row.variant(), row.outcome().run().relaxation(), town.centerX(), town.centerZ(),
+                        town.waterfront().map(Direction::getName).orElse("inland"), town.rotation().getSerializedName(), town.bounds().sizeX(),
+                        town.bounds().sizeZ(), town.predicted().land(), town.predicted().relief(), town.predicted().medianY(),
+                        town.predicted().stripSea().map(s -> String.format(Locale.ROOT, "%.3f", s)).orElse(""),
+                        town.predicted().sea().map(s -> String.format(Locale.ROOT, "%.3f", s)).orElse(""),
                         poi.centerX(), poi.centerZ(), poi.predicted().land(), poi.predicted().relief(), poi.predicted().medianY(),
                         town.bounds().centerDistanceTo(poi.bounds()), town.region().gapTo(poi.region()), row.outcome().run().candidates(),
                         row.samplingMillis(), row.planningMillis()));

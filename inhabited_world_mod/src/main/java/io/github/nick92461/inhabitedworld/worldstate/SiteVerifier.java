@@ -25,7 +25,6 @@ import io.github.nick92461.inhabitedworld.worldgen.pregen.PregenState;
 import io.github.nick92461.inhabitedworld.worldgen.pregen.Pregeneration;
 
 import net.minecraft.core.BlockPos;
-import net.minecraft.core.Direction;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.ServerLevel;
@@ -90,10 +89,13 @@ public final class SiteVerifier {
         log(result);
     }
 
-    /** The rectangle verification reads for a site: its build, plus the sea strip beyond a waterfront side. */
+    /**
+     * The rectangle verification reads for a site: its build, plus the sea checked beyond a waterfront side, as deep as
+     * the site's own waterfront depth.
+     */
     public static BlockRect sampledArea(PlannedSite site) {
         BlockRect b = site.bounds();
-        int d = SiteEvaluator.WATERFRONT_DEPTH;
+        int d = site.rules().waterfrontDepth();
         return site.waterfront().map(side -> switch (side) {
             case NORTH -> new BlockRect(b.minX(), b.minZ() - d, b.maxX(), b.maxZ());
             case SOUTH -> new BlockRect(b.minX(), b.minZ(), b.maxX(), b.maxZ() + d);
@@ -112,7 +114,7 @@ public final class SiteVerifier {
         TerrainLimits limits = new TerrainLimits(Math.max(tolerant.minLand(), VALID_GROUND.minLand()), Math.min(tolerant.maxRelief(), VALID_GROUND.maxRelief()),
                 Math.max(tolerant.minSurfaceY(), VALID_GROUND.minSurfaceY()), Math.min(tolerant.maxSurfaceY(), VALID_GROUND.maxSurfaceY()),
                 Math.min(tolerant.maxMountain(), VALID_GROUND.maxMountain()));
-        return SiteEvaluator.shortfalls(generated, limits, SiteEvaluator.MIN_SEA - SEA_TOLERANCE);
+        return SiteEvaluator.shortfalls(generated, limits, SiteEvaluator.MIN_SEA - SEA_TOLERANCE, Math.max(0.0, site.rules().minStripSea() - SEA_TOLERANCE));
     }
 
     /** Problems with the world spawn: it must not lie inside a POI's region. Empty when it passes. */
@@ -158,8 +160,7 @@ public final class SiteVerifier {
             TerrainSampler predictor = new NoiseTerrainSampler((NoiseBasedChunkGenerator) chunks.getGenerator(), chunks.randomState(), level);
             for (PlannedSite site : plan.sites()) {
                 TerrainGrid grid = TerrainGrid.sample(sampler, sampledArea(site));
-                Direction side = site.waterfront().orElse(null);
-                SiteMetrics generated = SiteEvaluator.measure(grid, site.bounds(), side);
+                SiteMetrics generated = SiteEvaluator.measure(grid, site);
                 List<String> problems = judge(site, generated);
                 logAgreement(site, grid, TerrainGrid.sample(predictor, sampledArea(site)));
                 passed &= problems.isEmpty();

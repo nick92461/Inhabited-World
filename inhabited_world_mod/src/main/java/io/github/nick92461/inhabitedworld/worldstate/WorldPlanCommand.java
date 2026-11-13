@@ -24,6 +24,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.block.Rotation;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.Vec3;
 
@@ -124,8 +125,10 @@ public final class WorldPlanCommand {
         lines.add("Planner: " + plan.planner().map(r -> r.describe()).orElse("none"));
         for (PlannedSite site : plan.sites()) {
             lines.add("Site " + site.id() + " (" + site.kind().getSerializedName() + ", " + site.catalogId() + "): centre "
-                    + site.centerX() + ", " + site.centerZ() + site.waterfront().map(d -> ", waterfront faces " + d.getName()).orElse(""));
-            lines.add("  bounds " + site.bounds() + ", semantic boundary " + site.region());
+                    + site.centerX() + ", " + site.centerZ() + site.waterfront().map(d -> ", waterfront faces " + d.getName()).orElse("")
+                    + (site.rotation() == Rotation.NONE ? "" : ", build rotated " + site.rotation().getSerializedName()));
+            lines.add("  bounds " + site.bounds() + " (" + site.bounds().sizeX() + " x " + site.bounds().sizeZ() + "), semantic boundary " + site.region()
+                    + site.waterfront().map(d -> ", waterfront strip " + site.rules().waterfrontDepth() + " blocks").orElse(""));
             for (SemanticRegion region : plan.regions()) {
                 if (region.site().filter(site.id()::equals).isPresent()) {
                     lines.add("  region " + region.id() + ": " + region.volume() + ", spawn profile " + region.profile().id());

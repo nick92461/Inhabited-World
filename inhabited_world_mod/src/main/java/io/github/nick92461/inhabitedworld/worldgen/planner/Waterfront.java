@@ -15,7 +15,8 @@ import net.minecraft.util.StringRepresentable;
     fallback drops it before giving up on anything else that matters more (see SitePlanner's relaxation steps).
   - REQUIRED: dropped only by the last-resort step that guarantees the site exists at all (canon 02 section 6).
 
-  A waterfront site records which side faces the sea, so Phase 3 can rotate the build's waterfront to match.
+  A waterfront site records which side faces the sea, and the rotation that turns the build's own sea side
+  (SiteRules.seaSide) to it, so Phase 3 places the build turned that way.
  */
 public enum Waterfront implements StringRepresentable {
     NONE,

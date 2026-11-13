@@ -10,6 +10,7 @@ import io.github.nick92461.inhabitedworld.InhabitedWorld;
 
 import net.minecraft.core.Direction;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.level.block.Rotation;
 
 import org.jspecify.annotations.Nullable;
 
@@ -18,9 +19,12 @@ import org.jspecify.annotations.Nullable;
   chunk exists, it chooses where every required site goes. No AI is involved (02 section 6, 01 section 2.2).
 
   1. Candidates. Every chunk-aligned position whose semantic region fits inside the playable area (minus the edge
-     margin) is a candidate for a site. Each is measured on the terrain lattice (SiteEvaluator) and kept if its
-     terrain meets the site's limits, it keeps the spawn clearance, and (for a waterfront site) one of its sides
-     faces open sea.
+     margin) is a candidate for a site, in each orientation the build may take (Orientation): a build with a fixed
+     sea side is turned so that side faces each compass direction in turn, which swaps its x and z sizes on a
+     quarter turn; a non-square build without a waterfront may lie either way round. Each is measured on the terrain
+     lattice (SiteEvaluator) and kept if its terrain meets the site's rules, it keeps the spawn clearance, and (for a
+     waterfront site) its waterfront side faces open sea. Of the orientations sharing one rectangle, the best-scoring
+     one stands for it.
   2. Choice. Candidates are ranked by score (flat, dry, low ground). The seed picks the order among the near-best
      (within POOL_SLACK of the best, at most POOL_SIZE), so two seeds with similar terrain still get different
      places; the rest follow by score. Positions and the relationship between sites therefore vary by seed
@@ -37,13 +41,20 @@ import org.jspecify.annotations.Nullable;
        3 last resort     only "inside the map, not overlapping": the best-scoring ground wins
      Step 3 always succeeds when the sites fit in the map at all, so the town and the POI always exist (02 section
      6); a request that can't fit even then is a configuration error.
+     A waterfront's own rules (sea in its strip and beyond it, its depth) are never loosened: a site keeps them in
+     full or, at the last resort (REQUIRED) or the layout step (PREFERRED), loses its waterfront altogether.
 
   Changing anything here or in SiteEvaluator changes which sites a seed gets: raise VERSION. Existing worlds keep
   the plan they were made with (02 section 7).
+
+  Versions:
+  - 1 (P2A step 5): square builds, never rotated; every waterfront strip 48 blocks deep with no sea needed in it.
+  - 2 (Drachenfels Harbour): per-site waterfront depth and sea in the strip; builds rotated so their sea side faces
+    the sea; the strip's sea counts in the score.
  */
 public final class SitePlanner {
     public static final Identifier ALGORITHM = InhabitedWorld.id("site_planner");
-    public static final int VERSION = 1;
+    public static final int VERSION = 2;
 
     public static final int STRICT = 0;
     public static final int LOOSER_TERRAIN = 1;
@@ -78,10 +89,19 @@ public final class SitePlanner {
         };
     }
 
-    /** The grid area the planner needs sampled for a request: the playable area plus room for waterfront checks. */
+    /**
+     * The grid area the planner needs sampled for a request: the playable area plus room for the deepest waterfront
+     * check of any of its sites.
+     */
     public static BlockRect samplingArea(PlanRequest request) {
         BlockRect map = new BlockRect(request.area().minBlockX(), request.area().minBlockZ(), request.area().maxBlockX(), request.area().maxBlockZ());
-        return map.inflate(SiteEvaluator.WATERFRONT_DEPTH + TerrainGrid.STEP);
+        int deepest = 0;
+        for (SiteRequirement site : request.sites()) {
+            if (site.rules().waterfront() != Waterfront.NONE) {
+                deepest = Math.max(deepest, site.rules().waterfrontDepth());
+            }
+        }
+        return map.inflate(deepest + TerrainGrid.STEP);
     }
 
     public static Outcome plan(PlanRequest request, TerrainGrid grid, long seed, @Nullable SpawnOrigin spawn) {
@@ -128,7 +148,7 @@ public final class SitePlanner {
                 rules = rules.withSpawnClearance(rules.spawnClearance() / 2);
             }
             if (level >= LAST_RESORT) {
-                rules = new SiteRules(rules.footprint(), Waterfront.NONE, TerrainLimits.ANY, 0);
+                rules = new SiteRules(rules.footprint(), Waterfront.NONE, rules.seaSide(), rules.waterfrontDepth(), rules.minStripSea(), TerrainLimits.ANY, 0);
             }
             sites.add(site.withRules(rules));
         }
@@ -145,10 +165,45 @@ public final class SitePlanner {
         return request.with(sites, spacings);
     }
 
-    private record Candidate(BlockRect bounds, BlockRect region, @Nullable Direction waterfront, SiteMetrics metrics, double score) {
+    /** One way a build may lie: its rotation from the template, and the world side that then holds its waterfront. */
+    record Orientation(Rotation rotation, @Nullable Direction waterfront) {
+    }
+
+    /*
+      The orientations the planner tries for a site, in a fixed order (Direction.Plane.HORIZONTAL: north, east, south,
+      west), so that ties always resolve the same way.
+      - Waterfront, fixed sea side: the one rotation that turns the sea side to each compass direction.
+      - Waterfront, no fixed sea side (planner version 1's square placeholder): unrotated, any side on the sea.
+      - No waterfront: unrotated, plus a quarter turn when the build is not square (a half turn gives the same
+        rectangle, so the rectangle chooses nothing more).
+     */
+    static List<Orientation> orientations(SiteRules rules) {
+        List<Orientation> orientations = new ArrayList<>();
+        if (rules.waterfront() == Waterfront.NONE) {
+            orientations.add(new Orientation(Rotation.NONE, null));
+            if (rules.footprint().sizeX() != rules.footprint().sizeZ()) {
+                orientations.add(new Orientation(Rotation.CLOCKWISE_90, null));
+            }
+            return orientations;
+        }
+        for (Direction side : Direction.Plane.HORIZONTAL) {
+            if (rules.seaSide().isEmpty()) {
+                orientations.add(new Orientation(Rotation.NONE, side));
+                continue;
+            }
+            for (Rotation rotation : Rotation.values()) {
+                if (rotation.rotate(rules.seaSide().get()) == side) {
+                    orientations.add(new Orientation(rotation, side));
+                }
+            }
+        }
+        return orientations;
+    }
+
+    private record Candidate(BlockRect bounds, BlockRect region, Orientation orientation, SiteMetrics metrics, double score) {
         PlannedSite resolve(SiteRequirement site) {
             return new PlannedSite(site.id(), site.kind(), site.catalogId(), site.rules(), this.bounds, this.region,
-                    Optional.ofNullable(this.waterfront), this.metrics);
+                    Optional.ofNullable(this.orientation.waterfront()), this.metrics, this.orientation.rotation());
         }
     }
 
@@ -157,7 +212,8 @@ public final class SitePlanner {
 
     private static final Comparator<Candidate> BY_SCORE = Comparator.comparingDouble(Candidate::score)
             .thenComparingInt(c -> c.bounds().minZ())
-            .thenComparingInt(c -> c.bounds().minX());
+            .thenComparingInt(c -> c.bounds().minX())
+            .thenComparingInt(c -> c.bounds().sizeX());
 
     // Every acceptable candidate for one site, in the order the planner tries them.
     private static Ranked rank(PlanRequest request, SiteRequirement site, TerrainGrid grid, long seed, int level, @Nullable SpawnOrigin spawn) {
@@ -165,40 +221,54 @@ public final class SitePlanner {
         Footprint footprint = rules.footprint();
         BlockRect usable = request.usableArea();
         int step = TerrainGrid.STEP;
-        int firstX = ceilTo(usable.minX() + footprint.blend(), step);
-        int firstZ = ceilTo(usable.minZ() + footprint.blend(), step);
-        int lastX = usable.maxX() - footprint.blend() - footprint.sizeX() + 1;
-        int lastZ = usable.maxZ() - footprint.blend() - footprint.sizeZ() + 1;
+
+        // The orientations grouped by the rectangle they give (x size), in first-seen order.
+        List<List<Orientation>> shapes = new ArrayList<>();
+        for (Orientation orientation : orientations(rules)) {
+            int sizeX = PlannedSite.rotatedSizeX(footprint, orientation.rotation());
+            List<Orientation> shape = null;
+            for (List<Orientation> existing : shapes) {
+                if (PlannedSite.rotatedSizeX(footprint, existing.getFirst().rotation()) == sizeX) {
+                    shape = existing;
+                }
+            }
+            if (shape == null) {
+                shape = new ArrayList<>();
+                shapes.add(shape);
+            }
+            shape.add(orientation);
+        }
 
         List<Candidate> accepted = new ArrayList<>();
         int judged = 0;
-        for (int z = firstZ; z <= lastZ; z += step) {
-            for (int x = firstX; x <= lastX; x += step) {
-                BlockRect bounds = BlockRect.ofSize(x, z, footprint.sizeX(), footprint.sizeZ());
-                BlockRect region = bounds.inflate(footprint.blend());
-                judged++;
-                if (spawn != null && rules.spawnClearance() > 0 && region.distanceTo(spawn.x() + 0.5, spawn.z() + 0.5) < rules.spawnClearance()) {
-                    continue;
-                }
-                Candidate best = null;
-                if (rules.waterfront() == Waterfront.NONE) {
-                    SiteMetrics metrics = SiteEvaluator.measure(grid, bounds, null);
-                    if (SiteEvaluator.meets(metrics, rules.limits())) {
-                        best = new Candidate(bounds, region, null, metrics, SiteEvaluator.score(metrics));
+        for (List<Orientation> shape : shapes) {
+            int sizeX = PlannedSite.rotatedSizeX(footprint, shape.getFirst().rotation());
+            int sizeZ = PlannedSite.rotatedSizeZ(footprint, shape.getFirst().rotation());
+            int firstX = ceilTo(usable.minX() + footprint.blend(), step);
+            int firstZ = ceilTo(usable.minZ() + footprint.blend(), step);
+            int lastX = usable.maxX() - footprint.blend() - sizeX + 1;
+            int lastZ = usable.maxZ() - footprint.blend() - sizeZ + 1;
+            for (int z = firstZ; z <= lastZ; z += step) {
+                for (int x = firstX; x <= lastX; x += step) {
+                    BlockRect bounds = BlockRect.ofSize(x, z, sizeX, sizeZ);
+                    BlockRect region = bounds.inflate(footprint.blend());
+                    judged++;
+                    if (spawn != null && rules.spawnClearance() > 0 && region.distanceTo(spawn.x() + 0.5, spawn.z() + 0.5) < rules.spawnClearance()) {
+                        continue;
                     }
-                } else {
-                    for (Direction side : Direction.Plane.HORIZONTAL) {
-                        SiteMetrics metrics = SiteEvaluator.measure(grid, bounds, side);
-                        if (SiteEvaluator.meets(metrics, rules.limits())) {
-                            Candidate candidate = new Candidate(bounds, region, side, metrics, SiteEvaluator.score(metrics));
+                    Candidate best = null;
+                    for (Orientation orientation : shape) {
+                        SiteMetrics metrics = SiteEvaluator.measure(grid, bounds, orientation.waterfront(), rules.waterfrontDepth());
+                        if (SiteEvaluator.meets(metrics, rules)) {
+                            Candidate candidate = new Candidate(bounds, region, orientation, metrics, SiteEvaluator.score(metrics));
                             if (best == null || candidate.score() < best.score()) {
                                 best = candidate;
                             }
                         }
                     }
-                }
-                if (best != null) {
-                    accepted.add(best);
+                    if (best != null) {
+                        accepted.add(best);
+                    }
                 }
             }
         }
