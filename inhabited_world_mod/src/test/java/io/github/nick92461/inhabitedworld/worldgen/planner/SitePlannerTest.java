@@ -43,7 +43,13 @@ class SitePlannerTest {
         return TerrainGrid.sample(sampler, SitePlanner.samplingArea(V01Sites.request(AREA)));
     }
 
-    private static final TerrainGrid ISLAND = grid(island(400));
+    /*
+      The test island's coast lies 384 blocks from the centre: a build's edge may reach 447 (the 480-block usable
+      area minus the 32-block blend), so the Harbour's 112-block strip can reach 4 of its 7 chunk columns into the
+      sea, enough for its strip-sea rule. A coast at 400 would leave only 3 of 7 (see V01Sites on the margins).
+     */
+    static final int ISLAND_HALF = 384;
+    private static final TerrainGrid ISLAND = grid(island(ISLAND_HALF));
 
     private static SitePlanner.Outcome plan(TerrainGrid grid, long seed, Waterfront waterfront) {
         return SitePlanner.plan(V01Sites.request(AREA, waterfront), grid, seed, SPAWN);
@@ -82,13 +88,13 @@ class SitePlannerTest {
                 Footprint footprint = asked.rules().footprint();
                 assertTrue(request.usableArea().contains(site.region()), site.id() + " region " + site.region());
                 assertEquals(site.bounds().inflate(footprint.blend()), site.region());
-                assertEquals(footprint.sizeX(), site.bounds().sizeX());
-                assertEquals(footprint.sizeZ(), site.bounds().sizeZ());
+                assertEquals(PlannedSite.rotatedSizeX(footprint, site.rotation()), site.bounds().sizeX(), "the footprint, turned");
+                assertEquals(PlannedSite.rotatedSizeZ(footprint, site.rotation()), site.bounds().sizeZ(), "the footprint, turned");
                 assertEquals(0, Math.floorMod(site.bounds().minX(), 16), "chunk-aligned");
                 assertEquals(0, Math.floorMod(site.bounds().minZ(), 16), "chunk-aligned");
                 assertEquals(asked.kind(), site.kind());
                 assertEquals(asked.catalogId(), site.catalogId());
-                assertTrue(SiteEvaluator.meets(site.predicted(), site.rules().limits()), site.id() + " meets its own rules: " + site.predicted().describe());
+                assertTrue(SiteEvaluator.meets(site.predicted(), site.rules()), site.id() + " meets its own rules: " + site.predicted().describe());
             }
         }
     }
@@ -119,18 +125,24 @@ class SitePlannerTest {
 
     @Test
     void aWaterfrontTownFacesTheSea() {
-        TerrainSampler terrain = island(400);
+        TerrainSampler terrain = island(ISLAND_HALF);
         for (long seed = 0; seed < 10; seed++) {
             for (Waterfront mode : new Waterfront[]{Waterfront.PREFERRED, Waterfront.REQUIRED}) {
                 PlannedSite town = plan(ISLAND, seed, mode).sites().get(0);
                 assertTrue(town.waterfront().isPresent(), "a " + mode + " waterfront town gets a waterfront side");
                 Direction side = town.waterfront().get();
                 BlockRect b = town.bounds();
-                // The first chunk beyond the middle of the waterfront side is open sea on the real terrain.
+                // Beyond the middle of the waterfront side lies open sea on the real terrain, and so does the outer part of
+                // the harbour strip (at least half of it is sea, and this coast is straight).
                 int x = (int) b.centerX() + side.getStepX() * (b.sizeX() / 2 + 40);
                 int z = (int) b.centerZ() + side.getStepZ() * (b.sizeZ() / 2 + 40);
                 assertTrue(terrain.sample(x, z).sea(), "seed " + seed + ": beyond the " + side.getName() + " side lies sea");
+                int sx = (int) b.centerX() + side.getStepX() * (b.sizeX() / 2 - 24);
+                int sz = (int) b.centerZ() + side.getStepZ() * (b.sizeZ() / 2 - 24);
+                assertTrue(terrain.sample(sx, sz).sea(), "seed " + seed + ": the harbour strip's outer part lies on the sea");
                 assertTrue(town.predicted().sea().orElseThrow() >= SiteEvaluator.MIN_SEA);
+                assertTrue(town.predicted().stripSea().orElseThrow() >= V01Sites.TOWN_MIN_STRIP_SEA);
+                assertEquals(side, town.rotation().rotate(V01Sites.TOWN_SEA_SIDE), "the rotation turns the Harbour's east side to the sea");
             }
             PlannedSite inland = plan(ISLAND, seed, Waterfront.NONE).sites().get(0);
             assertTrue(inland.waterfront().isEmpty(), "a town without a waterfront rule gets no waterfront side");
@@ -138,18 +150,42 @@ class SitePlannerTest {
         }
     }
 
+    /*
+      A coast only to the north: the Harbour, whose sea side is east, must be turned a quarter anticlockwise, so its
+      272 x 256 footprint lies 256 wide and 272 deep, with its strip along the northern edge.
+     */
+    @Test
+    void theHarbourIsTurnedToTheOnlyCoast() {
+        TerrainGrid northCoast = grid((x, z) -> z < -200 ? new TerrainSampler.Column(40, true, Ground.SEA)
+                : new TerrainSampler.Column(72 + (int) Math.round(3 * Math.sin(x / 50.0)), false, Ground.LAND));
+        for (long seed = 0; seed < 6; seed++) {
+            SitePlanner.Outcome outcome = plan(northCoast, seed, Waterfront.REQUIRED);
+            assertEquals(SitePlanner.STRICT, outcome.run().relaxation(), "seed " + seed);
+            PlannedSite town = outcome.sites().get(0);
+            assertEquals(java.util.Optional.of(Direction.NORTH), town.waterfront());
+            assertEquals(net.minecraft.world.level.block.Rotation.COUNTERCLOCKWISE_90, town.rotation());
+            assertEquals(256, town.bounds().sizeX());
+            assertEquals(272, town.bounds().sizeZ());
+            assertEquals(town.bounds().inflate(32), town.region(), "the region of a turned build is its turned bounds plus the blend");
+            // Strip rows sample z = minZ + 8 + 16k; the coast (z = -200) must cross the strip, with the land part all dry.
+            assertTrue(town.bounds().minZ() >= -320 && town.bounds().minZ() <= -256, "the coast runs through the strip: " + town.bounds());
+            assertTrue(town.predicted().stripSea().orElseThrow() >= V01Sites.TOWN_MIN_STRIP_SEA);
+            assertEquals(1.0, town.predicted().land(), 1e-9, "the land part is all dry");
+        }
+    }
+
     // A map too rough for the strict rules still gets both sites, through a recorded fallback step.
     @Test
     void roughTerrainFallsBackButKeepsBothSites() {
-        TerrainSampler base = island(400);
+        TerrainSampler base = island(ISLAND_HALF);
         TerrainSampler rough = (x, z) -> {
             TerrainSampler.Column c = base.sample(x, z);
-            int bump = ((x >> 4) + (z >> 4)) % 2 == 0 ? 0 : 28;
+            int bump = ((x >> 4) + (z >> 4)) % 2 == 0 ? 0 : 34;
             return new TerrainSampler.Column(c.surfaceY() + (c.dryLand() ? bump : 0), c.water(), c.ground());
         };
         PlanRequest request = V01Sites.request(AREA, Waterfront.PREFERRED);
         SitePlanner.Outcome outcome = SitePlanner.plan(request, grid(rough), 3L, SPAWN);
-        assertEquals(SitePlanner.LOOSER_TERRAIN, outcome.run().relaxation(), "a 28-block checkerboard fails strict relief (24) but not looser (36)");
+        assertEquals(SitePlanner.LOOSER_TERRAIN, outcome.run().relaxation(), "a 34-block checkerboard fails strict relief (32) but not looser (44)");
         assertEquals(2, outcome.sites().size());
         for (int k = 0; k < 2; k++) {
             assertEquals(SitePlanner.relax(request, SitePlanner.LOOSER_TERRAIN).sites().get(k).rules(), outcome.sites().get(k).rules(),
@@ -204,7 +240,7 @@ class SitePlannerTest {
 
     @Test
     void theGridMustCoverTheMap() {
-        TerrainGrid small = TerrainGrid.sample(island(400), new BlockRect(-256, -256, 255, 255));
+        TerrainGrid small = TerrainGrid.sample(island(ISLAND_HALF), new BlockRect(-256, -256, 255, 255));
         assertThrows(IllegalArgumentException.class, () -> plan(small, 1L, Waterfront.NONE));
     }
 

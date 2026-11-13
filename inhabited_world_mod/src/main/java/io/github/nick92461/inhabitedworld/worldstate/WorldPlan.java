@@ -44,17 +44,24 @@ import org.jspecify.annotations.Nullable;
   - 3 (P2B): adds regions. A version 2 plan is migrated once, explicitly (02 section 7 allows "an explicit migration"):
     its sites' regions are derived with SiteRegions, exactly as a new plan's are, and WorldPlanData writes the result
     back at the next save, so the migration never runs twice.
+  - 4 (planner version 2, the Drachenfels Harbour): sites may record a rotation, and their rules a sea side, a
+    waterfront depth and the sea needed in the waterfront strip; their metrics the sea measured in that strip. A
+    version 2 or 3 plan has none of these, and reads with exactly the values its planner used (no rotation, a 48-block
+    strip, no sea needed in it): its sites, regions and verification stay as they were, and only the version number
+    it is saved with changes. A version 4 plan is refused by an older mod, which would misread a rotated site.
 
   Later phases add structure placement and geography facts, each with a new data version.
  */
 public record WorldPlan(int dataVersion, UUID worldId, PlayableArea playableArea, Optional<PlannerRun> planner, List<PlannedSite> sites,
                         List<SemanticRegion> regions, Optional<SiteVerification> verification) {
-    public static final int DATA_VERSION = 3;
+    public static final int DATA_VERSION = 4;
 
     /** The step-4 plan: no planner, no sites. */
     public static final int DATA_VERSION_WITHOUT_SITES = 1;
     /** The step-5 plan: sites, but no 3D regions. */
     public static final int DATA_VERSION_WITHOUT_REGIONS = 2;
+    /** The P2B plan: sites and regions, planned by planner version 1 (no rotation, no per-site waterfront rules). */
+    public static final int DATA_VERSION_UNROTATED = 3;
 
     /** The plan as it is stored, any supported version, before migration. */
     public static final Codec<WorldPlan> STORED_CODEC = RecordCodecBuilder.create(i -> i.group(
@@ -93,6 +100,10 @@ public record WorldPlan(int dataVersion, UUID worldId, PlayableArea playableArea
             WorldPlan migrated = new WorldPlan(DATA_VERSION, plan.worldId(), plan.playableArea(), plan.planner(), plan.sites(),
                     SiteRegions.derive(plan.sites()), plan.verification());
             return check(migrated);
+        }
+        if (plan.dataVersion() == DATA_VERSION_UNROTATED) {
+            // Absent fields have already read as planner version 1's values; only the version number moves on.
+            return check(new WorldPlan(DATA_VERSION, plan.worldId(), plan.playableArea(), plan.planner(), plan.sites(), plan.regions(), plan.verification()));
         }
         if (plan.dataVersion() != DATA_VERSION) {
             return DataResult.error(() -> "unsupported WorldPlan data version " + plan.dataVersion() + " (this mod reads up to " + DATA_VERSION + ")");
