@@ -367,6 +367,19 @@ The user has downloaded worlds containing builds (a city) to use as the handcraf
 - **Phase 3:**
   - Placement in generated worlds: the town placed through the structure system at the planner's site, and generated terrain blended up to the kept-terrain mask edge (beardifier/terrain adaptation; expect tuning).
   - Markers resolved to world positions and persisted.
+- **Phase 3 split (started 2026-11-17 at the user's request):**
+  - Part 1 (session `p3-place-harbour`):
+    - D1 placed at the planner's site with its rotation
+    - terrain and seabed blend, and the town's ground cleaned (no infested stone)
+    - forbidden template entities dropped
+    - markers → semantic locations in WorldPlan v5, plus a read API
+    - placement verified; `/inhabited locations`
+  - Part 2 (session `p3-poi-threats`), in parallel, with no WorldPlan changes:
+    - a data-driven threat profile for the mine POI (zombies, skeletons and cave spiders only, with its own cap)
+    - a hotspot
+    - a guaranteed encounter (a placeholder "foreman") in its own persisted store: NOT_SPAWNED / ACTIVE / DEFEATED
+    - the mob-cap check; `/inhabited encounter`
+  - Part 3, after part 1 is merged: the handcrafted mine build placed at the POI site with the part 1 placer, hotspot and encounter anchors moved onto its markers, and geography facts (`02` §8).
 
 **Open (needs the user):**
 - each build's size in blocks
