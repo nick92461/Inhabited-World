@@ -187,8 +187,21 @@ public class RegionGameTests {
         server.getPlayerList().remove(player);
     }
 
-    // vanilla's own natural spawner, run SPAWN_ATTEMPTS times for the monster category from random spots in a chamber
+    // The POI's ambient count against its threat profile's local cap is refreshed once a second; a check within one tick
+    // starts from zero, so mobs gathered there by other tests can't cap it.
+    private static void resetPoiCount(ServerLevel level) {
+        RegionIndex index = Regions.index(level);
+        if (index != null) {
+            index.threats().forEach(t -> t.setPopulation(0));
+        }
+    }
+
     private static int naturalMonsterSpawns(ServerLevel level, Chamber chamber) {
+        return naturalMonsterSpawns(level, chamber, new ArrayList<>());
+    }
+
+    // vanilla's own natural spawner, run SPAWN_ATTEMPTS times for the monster category from random spots in a chamber
+    private static int naturalMonsterSpawns(ServerLevel level, Chamber chamber, List<String> types) {
         LevelChunk chunk = level.getChunk(chamber.chunk().x(), chamber.chunk().z());
         List<Mob> spawned = new ArrayList<>();
         int total = 0;
@@ -197,6 +210,12 @@ public class RegionGameTests {
                     chamber.chunk().getMinBlockZ() + level.getRandom().nextInt(16));
             NaturalSpawner.spawnCategoryForPosition(MobCategory.MONSTER, level, chunk, start, (type, l, pos, c) -> true, (mob, c) -> spawned.add(mob));
             total += spawned.size();
+            spawned.forEach(mob -> {
+                String type = EntityType.getKey(mob.getType()).getPath();
+                if (!types.contains(type)) {
+                    types.add(type);
+                }
+            });
             spawned.forEach(Entity::discard);
             spawned.clear();
         }
@@ -251,7 +270,9 @@ public class RegionGameTests {
                 // Vanilla spawns only within 128 blocks of a player: stand 48 blocks from the POI chamber for its count.
                 BlockPos nearPoi = a.poi().center().east(INSET);
                 player.snapTo(nearPoi.getX() + 0.5, nearPoi.getY() + 1, nearPoi.getZ() + 0.5);
-                int poi = naturalMonsterSpawns(level, a.poi());
+                resetPoiCount(level);
+                List<String> poiTypes = new ArrayList<>();
+                int poi = naturalMonsterSpawns(level, a.poi(), poiTypes);
                 player.snapTo(a.playerSpot().getX() + 0.5, a.playerSpot().getY(), a.playerSpot().getZ() + 0.5);
                 RegionIndexHolder holder = (RegionIndexHolder) level;
                 RegionIndex index = holder.inhabitedWorld$regionIndex();
@@ -266,7 +287,9 @@ public class RegionGameTests {
                         SPAWN_ATTEMPTS, town, wilderness, poi, townWithoutRegions);
                 helper.assertTrue(town == 0, "no natural hostile may spawn inside the town, but " + town + " did");
                 helper.assertTrue(wilderness > 0, "the wilderness keeps natural hostile spawning, but none spawned");
-                helper.assertTrue(poi > 0, "the POI placeholder keeps vanilla-like spawning, but none spawned");
+                helper.assertTrue(poi > 0, "the POI spawns its own hostiles, but none spawned");
+                helper.assertTrue(List.of("zombie", "skeleton", "cave_spider").containsAll(poiTypes),
+                        "the POI spawns only its threat profile's hostiles (Phase 3), got " + poiTypes);
                 helper.assertTrue(townWithoutRegions > 0, "control: without regions the town chamber spawns hostiles");
             } finally {
                 removePlayer(level.getServer(), player);
@@ -281,13 +304,14 @@ public class RegionGameTests {
         helper.succeedWhen(() -> {
             helper.assertTrue(a.dark(), "the chambers are dark once light has settled");
             ServerLevel level = helper.getLevel();
+            resetPoiCount(level);
             BlockPos town = a.town().center();
             BlockPos wild = a.wilderness().center();
             BlockPos poi = a.poi().center();
             for (EntitySpawnReason reason : List.of(EntitySpawnReason.NATURAL, EntitySpawnReason.REINFORCEMENT)) {
                 helper.assertFalse(check(level, EntityTypes.ZOMBIE, reason, town), "a zombie must not spawn in town, " + reason);
                 helper.assertTrue(check(level, EntityTypes.ZOMBIE, reason, wild), "a zombie may spawn in the wilderness, " + reason);
-                helper.assertTrue(check(level, EntityTypes.ZOMBIE, reason, poi), "a zombie may spawn in the POI (placeholder), " + reason);
+                helper.assertTrue(check(level, EntityTypes.ZOMBIE, reason, poi), "a zombie (one of the POI's own hostiles) may spawn in the POI, " + reason);
             }
             helper.assertTrue(SpawnGovernance.decide(EntityTypes.SKELETON, level, EntitySpawnReason.NATURAL, town) == SpawnPolicy.Decision.REFUSE_AMBIENT_HOSTILE,
                     "the town's refusal names the settlement rule");

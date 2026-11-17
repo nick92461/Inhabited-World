@@ -15,15 +15,17 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 
 /*
-  Spawn governance hook (canon 06 sections 13, 17.5, 17.6). checkSpawnRules is the shared check for natural and
+  Spawn governance hook (canon 06 sections 13, 17.3, 17.5, 17.6). checkSpawnRules is the shared check for natural and
   chunk-generation spawning, spawner blocks, trial spawners and zombie reinforcements, and it runs before the
-  entity is built. @ModifyReturnValue (not a cancellable @Inject) keeps it allocation-free.
+  entity is built. Vanilla's verdict goes in, the region's rules decide what comes out: usually vanilla's verdict or a
+  refusal, and for a hostile a POI threat profile lists, the profile's own spawn conditions. @ModifyReturnValue (not
+  a cancellable @Inject) keeps it allocation-free.
  */
 @Mixin(SpawnPlacements.class)
 public abstract class SpawnPlacementsMixin {
     @ModifyReturnValue(method = "checkSpawnRules", at = @At("RETURN"))
     private static boolean inhabitedWorld$governSpawn(boolean original, EntityType<?> type, ServerLevelAccessor level,
                                                       EntitySpawnReason reason, BlockPos pos, RandomSource random) {
-        return original && SpawnGovernance.allows(type, level, reason, pos);
+        return SpawnGovernance.check(original, type, level, reason, pos, random);
     }
 }

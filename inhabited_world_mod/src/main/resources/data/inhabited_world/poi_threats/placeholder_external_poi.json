@@ -1,0 +1,5 @@
+{
+  "_comment": "What the v0.1 external POI (catalog ID inhabited_world:placeholder_external_poi, planned by V01Sites) means for threats: its threat profile and its guaranteed encounters. PLACEHOLDER IDs until Phase 3 part 3 gives the mine its real catalog entry.",
+  "threat_profile": "inhabited_world:placeholder_abandoned_mine",
+  "encounters": ["inhabited_world:placeholder_mine_foreman"]
+}

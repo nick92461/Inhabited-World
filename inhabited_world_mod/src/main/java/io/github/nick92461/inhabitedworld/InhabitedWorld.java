@@ -2,6 +2,8 @@ package io.github.nick92461.inhabitedworld;
 
 import io.github.nick92461.inhabitedworld.region.RegionEdges;
 import io.github.nick92461.inhabitedworld.spawn.SpawnPolicyCommand;
+import io.github.nick92461.inhabitedworld.threat.LevelThreats;
+import io.github.nick92461.inhabitedworld.threat.ThreatCommands;
 import io.github.nick92461.inhabitedworld.town.TownCommand;
 import io.github.nick92461.inhabitedworld.town.WorkshopWorld;
 import io.github.nick92461.inhabitedworld.worldgen.RpgWorlds;
@@ -28,6 +30,7 @@ public class InhabitedWorld implements ModInitializer {
 	public void onInitialize() {
 		LOGGER.info("[{}] foundation initialized", MOD_ID);
 		Pregeneration.init();
+		LevelThreats.init();
 
 		ServerLifecycleEvents.SERVER_STARTED.register(server -> {
 			for (ServerLevel level : server.getAllLevels()) {
@@ -39,9 +42,11 @@ public class InhabitedWorld implements ModInitializer {
 		// Debug commands exist only in development runs (canon 10 section 60, Testing Workflow).
 		if (FabricLoader.getInstance().isDevelopmentEnvironment()) {
 			RegionEdges.init();
+			ThreatCommands.init();
 			WorkshopWorld.init();
 			CommandRegistrationCallback.EVENT.register((dispatcher, context, selection) -> {
 				SpawnPolicyCommand.register(dispatcher, context);
+				ThreatCommands.register(dispatcher);
 				WorldPlanCommand.register(dispatcher);
 				TownCommand.register(dispatcher, context);
 			});

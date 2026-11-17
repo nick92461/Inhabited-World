@@ -17,13 +17,15 @@ import org.jspecify.annotations.Nullable;
   Version 0.1 has three:
   - wilderness: vanilla-style hostile ecology, night and cave danger kept (06 section 17.2)
   - protected_settlement: ordinary hostile generation never happens inside; hostiles may still walk in (06 section 17.1)
-  - poi_placeholder: the external POI's profile until Phase 3. It behaves like the wilderness for now. Phase 3 replaces
-    it with the reusable minimal POI threat profile (06 section 17.3: allowed, blocked and weighted hostile types,
-    local caps, encounter zones, safe areas) and the guaranteed encounters beside it (06 sections 17.7, 17.8).
-    SpawnPolicy.decide is the one place a profile is consulted, so that is where Phase 3 plugs in.
+  - poi_placeholder: "a semantic POI: its threat profile comes from its identity". Since Phase 3 the region's actual
+    threat profile is chosen by its site's catalog ID (threat/LevelThreats: catalog ID -> data/<ns>/poi_threats ->
+    data/<ns>/threat_profile), so the v0.1 mine's rules are data and every existing plan keeps this saved ID. Its name
+    stays for save compatibility (an ID in saved plans is never renamed).
 
-  Saved as its identifier (inhabited_world:protected_settlement), so Phase 3's data-driven profiles can use the same
-  field. An unknown ID is a decoding error: it can only come from a newer mod version, whose plans are refused anyway.
+  Each ID has an engine threat profile (threat/ThreatProfile.builtIn); SpawnPolicy.decide consults the bound profile.
+
+  Saved as its identifier (inhabited_world:protected_settlement). An unknown ID is a decoding error: it can only come
+  from a newer mod version, whose plans are refused anyway.
  */
 public enum SpawnProfile {
     WILDERNESS("wilderness", false),

@@ -4,6 +4,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.function.Function;
+
+import io.github.nick92461.inhabitedworld.threat.RegionThreat;
 
 /*
   The in-memory semantic-region lookup used on the spawn path (canon 06 section 17.6: in-memory region data,
@@ -18,6 +21,10 @@ import java.util.List;
   - otherwise: the first listed region whose 3D box contains the position, else the wilderness.
   No step allocates. The grid grows with the area the regions span, not with their number, so a large world with
   many settlements (implementation plan, long-term direction) costs one int per chunk column.
+
+  Each region is also bound to the threat profile that applies in it (RegionThreat; threatAt is regionAt's lookup
+  returning that binding). A new index binds the engine profiles; withThreats (LevelThreats, when the world opens)
+  returns a copy sharing every lookup array with each POI bound to its catalog entry's profile.
  */
 public final class RegionIndex {
     private static final Comparator<SemanticRegion> PRECEDENCE = Comparator
@@ -42,6 +49,30 @@ public final class RegionIndex {
     private final int[] cellStart;
     private final int[] cellRegions;
 
+    // Each region bound to its threat profile (same order as regions); engine profiles until withThreats binds POIs.
+    private final RegionThreat wildernessThreat;
+    private final RegionThreat[] threats;
+
+    // A copy sharing every lookup array, with another threat binding.
+    private RegionIndex(RegionIndex base, RegionThreat wildernessThreat, RegionThreat[] threats) {
+        this.wilderness = base.wilderness;
+        this.regions = base.regions;
+        this.minX = base.minX;
+        this.minY = base.minY;
+        this.minZ = base.minZ;
+        this.maxX = base.maxX;
+        this.maxY = base.maxY;
+        this.maxZ = base.maxZ;
+        this.gridMinChunkX = base.gridMinChunkX;
+        this.gridMinChunkZ = base.gridMinChunkZ;
+        this.gridSizeX = base.gridSizeX;
+        this.gridSizeZ = base.gridSizeZ;
+        this.cellStart = base.cellStart;
+        this.cellRegions = base.cellRegions;
+        this.wildernessThreat = wildernessThreat;
+        this.threats = threats;
+    }
+
     private RegionIndex(SemanticRegion wilderness, List<SemanticRegion> regions) {
         if (!wilderness.isWilderness()) {
             throw new IllegalArgumentException("the fallback region must be the wilderness, got " + wilderness.id());
@@ -51,6 +82,11 @@ public final class RegionIndex {
         sorted.sort(PRECEDENCE);
         int count = sorted.size();
         this.regions = sorted.toArray(new SemanticRegion[0]);
+        this.wildernessThreat = RegionThreat.builtIn(wilderness);
+        this.threats = new RegionThreat[count];
+        for (int r = 0; r < count; r++) {
+            this.threats[r] = RegionThreat.builtIn(this.regions[r]);
+        }
         this.minX = new int[count];
         this.minY = new int[count];
         this.minZ = new int[count];
@@ -130,19 +166,55 @@ public final class RegionIndex {
         return new RegionIndex(wilderness, regions);
     }
 
+    /**
+     * The same index with each region bound to the threat profile that applies in it (LevelThreats: a POI's profile
+     * comes from its catalog entry). The lookup arrays are shared; only the binding differs.
+     */
+    public RegionIndex withThreats(Function<SemanticRegion, RegionThreat> binder) {
+        RegionThreat[] bound = new RegionThreat[this.regions.length];
+        for (int r = 0; r < bound.length; r++) {
+            bound[r] = binder.apply(this.regions[r]);
+            if (bound[r].region() != this.regions[r]) {
+                throw new IllegalArgumentException("a threat binding must keep its region, got " + bound[r].region().id() + " for " + this.regions[r].id());
+            }
+        }
+        return new RegionIndex(this, this.wildernessThreat, bound);
+    }
+
     /** The region that applies at a block: the most specific one containing it, else the wilderness. Allocation-free. */
     public SemanticRegion regionAt(int x, int y, int z) {
+        int r = this.slot(x, y, z);
+        return r < 0 ? this.wilderness : this.regions[r];
+    }
+
+    /** The threat binding of the region that applies at a block (regionAt's region with its profile). Allocation-free. */
+    public RegionThreat threatAt(int x, int y, int z) {
+        int r = this.slot(x, y, z);
+        return r < 0 ? this.wildernessThreat : this.threats[r];
+    }
+
+    // The index into regions of the applying region, or -1 for the wilderness.
+    private int slot(int x, int y, int z) {
         int cell = this.cell(x >> 4, z >> 4);
         if (cell < 0) {
-            return this.wilderness;
+            return -1;
         }
         for (int k = this.cellStart[cell], end = this.cellStart[cell + 1]; k < end; k++) {
             int r = this.cellRegions[k];
             if (x >= this.minX[r] && x <= this.maxX[r] && z >= this.minZ[r] && z <= this.maxZ[r] && y >= this.minY[r] && y <= this.maxY[r]) {
-                return this.regions[r];
+                return r;
             }
         }
-        return this.wilderness;
+        return -1;
+    }
+
+    /** Every region's threat binding, most specific first (the wilderness's is wildernessThreat). */
+    public List<RegionThreat> threats() {
+        return List.of(this.threats);
+    }
+
+    public RegionThreat wildernessThreat() {
+        return this.wildernessThreat;
     }
 
     /** Whether no region touches this chunk column, so every position in it is wilderness without further checks. */

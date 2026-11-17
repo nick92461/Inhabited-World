@@ -1,0 +1,10 @@
+{
+  "_comment": "PLACEHOLDER guaranteed encounter: the mine's required enemy for the blacksmith's quest (canon 09 section 3; the quest itself is Phase 4). Spawned once when a player first comes within 32 blocks of the POI's centre, never respawns once defeated. The anchor becomes a semantic marker of the mine build in Phase 3 part 3.",
+  "entity": "minecraft:zombie",
+  "name": "Foreman (placeholder)",
+  "equipment": {"head": "minecraft:iron_helmet", "mainhand": "minecraft:iron_pickaxe"},
+  "anchor": {"offset": [0, 0, 0], "vertical": "surface"},
+  "trigger_radius": 32,
+  "home_radius": 12,
+  "respawns": false
+}

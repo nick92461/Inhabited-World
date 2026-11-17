@@ -1,6 +1,7 @@
 package io.github.nick92461.inhabitedworld.region;
 
 import io.github.nick92461.inhabitedworld.InhabitedWorld;
+import io.github.nick92461.inhabitedworld.threat.LevelThreats;
 import io.github.nick92461.inhabitedworld.worldgen.RpgWorlds;
 import io.github.nick92461.inhabitedworld.worldstate.WorldPlan;
 import io.github.nick92461.inhabitedworld.worldstate.WorldPlans;
@@ -17,8 +18,8 @@ import org.jspecify.annotations.Nullable;
 
   The overworld's index is built from the plan once, before the first chunk generates or the first mob spawns:
   when a new world's plan is made (WorldPlans.createAtWorldCreation), and when an existing world is opened (the start
-  of level preparation, MinecraftServerMixin). A level without one (a Default world, or an Inhabited World made
-  before the planner existed) is all wilderness.
+  of level preparation, MinecraftServerMixin), and again after a data-pack reload (the threat data may have changed).
+  A level without one (a Default world, or an Inhabited World made before the planner existed) is all wilderness.
  */
 public final class Regions {
     private Regions() {
@@ -29,6 +30,12 @@ public final class Regions {
         ServerLevel overworld = server.overworld();
         WorldPlan plan = RpgWorlds.isRpg(overworld) ? WorldPlans.get(server) : null;
         RegionIndex index = plan == null || plan.regions().isEmpty() ? null : plan.buildRegionIndex();
+        if (index != null) {
+            // Each region gets its threat profile (a POI's from its catalog entry), hotspots and encounters.
+            index = LevelThreats.install(server, overworld, plan, index);
+        } else {
+            LevelThreats.clear(overworld);
+        }
         ((RegionIndexHolder) overworld).inhabitedWorld$setRegionIndex(index);
         if (index != null) {
             InhabitedWorld.LOGGER.info("[{}] semantic regions ready: {} regions over {} chunk columns, the rest is wilderness", InhabitedWorld.MOD_ID,
