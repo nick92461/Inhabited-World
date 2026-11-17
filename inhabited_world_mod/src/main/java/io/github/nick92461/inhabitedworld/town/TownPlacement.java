@@ -248,6 +248,9 @@ public final class TownPlacement {
                     TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started), true);
             RESULTS.add(result);
             InhabitedWorld.LOGGER.info("[{}] placed {} at site {}: {}", InhabitedWorld.MOD_ID, town.key(), site.id(), result.describe());
+            WorldPlans.get(server).structure(site.id()).ifPresent(placed -> placed.locations().forEach(l ->
+                    InhabitedWorld.LOGGER.info("[{}]   semantic location {} at {}, yaw {}, region {}", InhabitedWorld.MOD_ID, l.id(),
+                            l.pos().toShortString(), l.yaw(), l.region())));
             if (check.passed()) {
                 InhabitedWorld.LOGGER.info("[{}] placement check PASSED for site {}: {}", InhabitedWorld.MOD_ID, site.id(), check.describe());
             } else {

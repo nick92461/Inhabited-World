@@ -32,6 +32,7 @@ import net.minecraft.world.entity.EntityTypes;
 import net.minecraft.world.entity.MobCategory;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.InfestedBlock;
+import net.minecraft.world.level.block.SnowyBlock;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.level.levelgen.structure.templatesystem.LiquidSettings;
@@ -199,8 +200,8 @@ public final class TownPlacer {
     /*
       Gives one blend column its new ground y `g` (TownBlend), with water up to waterTop above ground below it. A column
       whose ground is already within TownBlend.KEEP_WITHIN of g is left exactly as generated (with its plants and trees). Otherwise, from the top:
-      air or water above g, the surface block at g with three blocks of subsoil under it (grass and dirt on land;
-      sand at the shore and on a shallow seabed; gravel deeper down), stone filled down through any air or fluid below,
+      air or water above g, the surface block at g with three blocks of subsoil under it (grass and dirt on land, with
+      snow on it where the biome is cold enough; sand at the shore and on a shallow seabed; gravel deeper down), stone filled down through any air or fluid below,
       and the ground cleanup under it.
      */
     public static BlendResult blendColumn(ServerLevel level, int x, int z, int g, int waterTop) {
@@ -229,6 +230,11 @@ public final class TownPlacer {
         } else {
             surface = Blocks.GRAVEL.defaultBlockState();
             under = Blocks.GRAVEL.defaultBlockState();
+        }
+        // land in a biome cold enough to snow gets snowy grass under a snow layer, like the generated ground around it
+        if (surface.is(Blocks.GRASS_BLOCK) && level.getBiome(p.set(x, g + 1, z)).value().coldEnoughToSnow(p, level.getSeaLevel())) {
+            surface = surface.setValue(SnowyBlock.SNOWY, true);
+            level.setBlock(p, Blocks.SNOW.defaultBlockState(), FLAGS);
         }
         level.setBlock(p.set(x, g, z), surface, FLAGS);
         for (int y = g - 1; y >= g - 3; y--) {

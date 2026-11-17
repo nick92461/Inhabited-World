@@ -341,6 +341,9 @@ public class TownPlacementGameTests {
                 for (int[] n : nb) {
                     int nx = x + n[0];
                     int nz = z + n[1];
+                    if (bounds.contains(nx, nz) && !field.free(nx, nz)) {
+                        continue; // a stored town column: its ground here would be a roof or a wall top
+                    }
                     worst = Math.max(worst, Math.abs(ground[(z - area.minZ()) * w + x - area.minX()] - ground[(nz - area.minZ()) * w + nx - area.minX()]));
                 }
                 histogram[Math.min(7, worst)]++;
@@ -354,7 +357,7 @@ public class TownPlacementGameTests {
             int[] tc = p.t().toTemplate(st[1], st[2]);
             worst.add(st[0] + " at " + st[1] + ", " + st[2] + (tc == null ? " (border)" : " (template " + tc[0] + ", " + tc[1] + ")"));
         }
-        LOGGER.info("blend step histogram (largest step to a neighbour, 0..6, 7+ blocks): {}; steepest: {}", java.util.Arrays.toString(histogram), worst);
+        LOGGER.info("blend step histogram (largest step to a neighbouring blend or outside column, 0..6, 7+ blocks): {}; steepest: {}", java.util.Arrays.toString(histogram), worst);
 
         // the water surface: the town's stored sea against the generated sea around the region
         Map<Integer, Integer> townWater = new java.util.TreeMap<>();
