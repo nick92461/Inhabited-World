@@ -2,6 +2,7 @@ package io.github.nick92461.inhabitedworld.worldstate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -65,7 +66,7 @@ class WorldPlanTest {
     @Test
     void savesAndLoadsUnchanged() {
         JsonObject json = encode(this.plan);
-        assertEquals(4, json.get("data_version").getAsInt(), "every persisted domain carries a data version");
+        assertEquals(5, json.get("data_version").getAsInt(), "every persisted domain carries a data version");
         assertEquals("7b0e4f43-58a4-4c1c-9b55-1f4b7f2d9c11", json.get("world_id").getAsString());
         assertEquals("inhabited_world:site_planner", json.getAsJsonObject("planner").get("algorithm").getAsString());
         JsonObject town = json.getAsJsonArray("sites").get(0).getAsJsonObject();
@@ -175,6 +176,89 @@ class WorldPlanTest {
         assertEquals("town", index.regionAt(-150, 80, -250).id());
         assertEquals("external_poi", index.regionAt(240, 10, -240).id());
         assertEquals("wilderness", index.regionAt(0, 80, 0).id());
+    }
+
+    // Phase 3: the town placed at its site, with its markers resolved, and the read-back check.
+    static PlacedStructure harbour(String... locationIds) {
+        List<SemanticLocation> locations = new java.util.ArrayList<>();
+        int i = 0;
+        for (String id : locationIds) {
+            locations.add(new SemanticLocation(id, new BlockPos(-173 + i, 102, -99 - i), 180f, V01Sites.TOWN, "town"));
+            i++;
+        }
+        return new PlacedStructure(V01Sites.TOWN, V01Sites.TOWN_CATALOG_ID, "drachenfels/d1_harbour/v1", Rotation.COUNTERCLOCKWISE_90,
+                new BlockPos(-272, 2, -97), locations, new PlacementCheck(true, 264, 264, List.of()));
+    }
+
+    @Test
+    void placedStructuresAreSavedWithThePlan() {
+        WorldPlan placed = this.plan.withStructure(harbour("d1_main_gate", "d1_market_square"));
+        JsonObject json = encode(placed);
+        JsonObject structure = json.getAsJsonArray("structures").get(0).getAsJsonObject();
+        assertEquals("town", structure.get("site").getAsString());
+        assertEquals("drachenfels/d1_harbour/v1", structure.get("build").getAsString());
+        assertEquals("counterclockwise_90", structure.get("rotation").getAsString());
+        JsonObject gate = structure.getAsJsonArray("locations").get(0).getAsJsonObject();
+        assertEquals("d1_main_gate", gate.get("id").getAsString());
+        assertEquals(180f, gate.get("yaw").getAsFloat());
+        assertEquals("town", gate.get("region").getAsString());
+        assertTrue(structure.getAsJsonObject("check").get("passed").getAsBoolean());
+        assertEquals(placed, WorldPlan.CODEC.parse(JsonOps.INSTANCE, json).getOrThrow());
+        assertEquals(this.plan.sites(), placed.sites(), "placing a build never changes the sites");
+        assertEquals(this.plan.regions(), placed.regions());
+
+        SemanticLocations locations = SemanticLocations.of(placed);
+        assertEquals(2, locations.size());
+        assertEquals(new BlockPos(-173, 102, -99), locations.get("d1_main_gate").orElseThrow().pos());
+        assertEquals("town", locations.get("d1_market_square").orElseThrow().site());
+        assertEquals(List.of("d1_main_gate", "d1_market_square"), locations.ofSite("town").stream().map(SemanticLocation::id).toList());
+        assertTrue(locations.get("blackwood_smithy").isEmpty());
+        assertEquals(0, SemanticLocations.of(this.plan).size(), "a plan without placed structures has no locations");
+    }
+
+    @Test
+    void placedStructuresAreChecked() {
+        assertThrows(IllegalArgumentException.class, () -> this.plan.withStructure(harbour("d1_quay", "d1_quay")), "location ids are unique");
+        WorldPlan placed = this.plan.withStructure(harbour("d1_quay"));
+        assertThrows(IllegalArgumentException.class, () -> placed.withStructure(harbour("d1_pier_north")), "one structure per site");
+        PlacedStructure h = harbour("d1_quay");
+        assertThrows(IllegalArgumentException.class, () -> this.plan.withStructure(new PlacedStructure("elsewhere", h.catalogId(), h.build(),
+                h.rotation(), h.origin(), List.of(), h.check())), "a structure stands on one of the plan's sites");
+        assertThrows(IllegalArgumentException.class, () -> this.plan.withStructure(new PlacedStructure(V01Sites.TOWN, V01Sites.POI_CATALOG_ID,
+                h.build(), h.rotation(), h.origin(), List.of(), h.check())), "the site's own build is placed there");
+        assertThrows(IllegalArgumentException.class, () -> this.plan.withStructure(new PlacedStructure(V01Sites.TOWN, h.catalogId(), h.build(),
+                Rotation.NONE, h.origin(), List.of(), h.check())), "turned as the site says");
+
+        JsonObject strayLocation = encode(placed);
+        strayLocation.getAsJsonArray("structures").get(0).getAsJsonObject().getAsJsonArray("locations").get(0).getAsJsonObject()
+                .addProperty("site", V01Sites.EXTERNAL_POI);
+        assertTrue(WorldPlan.CODEC.parse(JsonOps.INSTANCE, strayLocation).isError(), "a location belongs to its structure's site");
+    }
+
+    /*
+      A planner-version-2 world (data version 4, before builds were placed): it reads with no placed structures, every
+      other field exactly as saved, and is written back once as version 5. Nothing is ever placed into it (no
+      PlacementState, see TownPlacement), so it stays without a town.
+     */
+    @Test
+    void aVersionFourPlanReadsWithoutPlacedStructures() {
+        SiteVerification verification = new SiteVerification(true, List.of(
+                new SiteVerification.SiteCheck(V01Sites.TOWN, true, new SiteMetrics(1.0, 23, 86, 0.0, Optional.of(1.0), Optional.of(0.54)), List.of()),
+                new SiteVerification.SiteCheck(V01Sites.EXTERNAL_POI, true, new SiteMetrics(0.97, 2, 64, 0.0, Optional.empty()), List.of())),
+                Optional.of(new BlockPos(0, 70, 0)), List.of());
+        JsonObject v4 = encode(this.plan.withVerification(verification));
+        v4.addProperty("data_version", 4);
+        assertFalse(v4.has("structures"), "a plan without placed structures writes none");
+
+        WorldPlan read = WorldPlan.CODEC.parse(JsonOps.INSTANCE, v4).getOrThrow();
+        assertEquals(WorldPlan.DATA_VERSION, read.dataVersion());
+        assertEquals(this.plan.withVerification(verification), read, "sites, regions and verification read exactly as saved");
+        assertTrue(read.structures().isEmpty());
+        assertTrue(WorldPlanData.TYPE.codec().parse(JsonOps.INSTANCE, v4).getOrThrow().isDirty(), "written back once as version 5");
+
+        JsonObject v4WithStructures = encode(this.plan.withStructure(harbour("d1_quay")));
+        v4WithStructures.addProperty("data_version", 4);
+        assertTrue(WorldPlan.CODEC.parse(JsonOps.INSTANCE, v4WithStructures).isError(), "version 4 had no placed structures");
     }
 
     /*

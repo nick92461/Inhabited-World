@@ -71,6 +71,10 @@ loom.runs.named("gameTest") {
 		property "inhabited_world.dev.plannerSeeds", providers.gradleProperty("plannerSeeds").get()
 	}
 	property "inhabited_world.dev.reportDir", layout.buildDirectory.dir("reports").get().asFile.absolutePath
+	// The game-test world's seed is vanilla's 0; -PgameTestSeed=20261029 creates it with the test launch's seed instead.
+	if (providers.gradleProperty("gameTestSeed").isPresent()) {
+		property "inhabited_world.dev.gameTestSeed", providers.gradleProperty("gameTestSeed").get()
+	}
 }
 
 // Every game-test run starts from a freshly created world, as a player's new world would: world creation is what

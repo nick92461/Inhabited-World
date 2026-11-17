@@ -3,6 +3,7 @@ package io.github.nick92461.inhabitedworld.mixin;
 import com.llamalad7.mixinextras.injector.v2.WrapWithCondition;
 
 import io.github.nick92461.inhabitedworld.region.Regions;
+import io.github.nick92461.inhabitedworld.town.TownPlacement;
 import io.github.nick92461.inhabitedworld.worldgen.pregen.Pregeneration;
 import io.github.nick92461.inhabitedworld.worldstate.SiteVerifier;
 import io.github.nick92461.inhabitedworld.worldstate.WorldPlans;
@@ -26,7 +27,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
      border.
   2. prepareLevels, at the start: build the semantic-region index from the saved plan (Regions), pre-generate the
      playable area if the plan says so and it isn't finished, then
-     verify the planned sites against the generated terrain once pre-generation is complete.
+     verify the planned sites against the generated terrain once pre-generation is complete, then place the planned
+     builds (the town) that this world still has to place, once.
   3. If pre-generation reported progress as the LOAD_INITIAL_CHUNKS stage, vanilla doesn't start that stage again
      (a second start would push the loading bar past 100%). Vanilla still loads its own initial chunks; for a new
      world there are none.
@@ -55,6 +57,7 @@ public abstract class MinecraftServerMixin {
         Regions.install(server);
         this.inhabitedWorld$pregenerationStartedInitialChunks = Pregeneration.runIfNeeded(server, this.levelLoadListener);
         SiteVerifier.verifyIfNeeded(server);
+        TownPlacement.placeIfNeeded(server);
     }
 
     @WrapWithCondition(

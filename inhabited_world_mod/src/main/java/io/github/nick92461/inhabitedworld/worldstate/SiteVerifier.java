@@ -11,6 +11,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import io.github.nick92461.inhabitedworld.InhabitedWorld;
+import io.github.nick92461.inhabitedworld.town.TownColumns;
+import io.github.nick92461.inhabitedworld.town.TownManifest;
+import io.github.nick92461.inhabitedworld.town.TownPlacer;
+import io.github.nick92461.inhabitedworld.town.TownTransform;
 import io.github.nick92461.inhabitedworld.worldgen.planner.BlockRect;
 import io.github.nick92461.inhabitedworld.worldgen.planner.GeneratedTerrainSampler;
 import io.github.nick92461.inhabitedworld.worldgen.planner.NoiseTerrainSampler;
@@ -30,7 +34,9 @@ import net.minecraft.server.level.ServerChunkCache;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.chunk.LevelChunk;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
+import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemplate;
 
 /*
   Verification after pre-generation (canon 02 section 6: pre-generation "lets the planner verify that required POIs
@@ -44,9 +50,12 @@ import net.minecraft.world.level.levelgen.NoiseBasedChunkGenerator;
   every POI region. The result is recorded in the WorldPlan once and logged.
 
   On failure (decided for P2A step 5): the world still opens, the failure is logged as an error with every shortfall
-  and recorded in the plan (the dev command /inhabited plan shows it). The plan is never changed after generation
-  (02 section 7: Phase 3 places builds at the planned sites as the chunks generate, so moving a site afterwards
-  would leave it on terrain generated for something else). Failure is meant to be near-impossible: the planner
+  and recorded in the plan (the dev command /inhabited plan shows it). The plan's sites are never changed after
+  generation (02 section 7: moving a site afterwards would leave it on terrain generated for something else).
+
+  Phase 3 places the builds after this check (town/TownPlacement), so the terrain measured here is still the
+  generated ground the town replaces. Once a build is placed, checkPlacement reads back a sample of its template
+  blocks; the result is recorded with the placed structure, and a failure is logged and recorded, never acted on. Failure is meant to be near-impossible: the planner
   only picks sites whose predicted terrain meets the rules, its fallback steps guarantee every site exists, and the
   game tests check the prediction against a generated world.
  */
@@ -66,6 +75,10 @@ public final class SiteVerifier {
     public static final TerrainLimits VALID_GROUND = new TerrainLimits(0.6, 48, 55, 160, 0.6);
 
     private static final long SLICE_NANOS = TimeUnit.MILLISECONDS.toNanos(50);
+
+    /** Placement check: every SAMPLE_TILE_STRIDE-th tile is read back, SAMPLES_PER_TILE of its stored blocks. */
+    public static final int SAMPLE_TILE_STRIDE = 7;
+    public static final int SAMPLES_PER_TILE = 24;
 
     private SiteVerifier() {
     }
@@ -126,6 +139,46 @@ public final class SiteVerifier {
             }
         }
         return problems;
+    }
+
+    /*
+      Reads back a deterministic sample of a placed town's template blocks: from every SAMPLE_TILE_STRIDE-th tile,
+      SAMPLES_PER_TILE blocks spread evenly over its block list (only blocks of stored columns, which placement keeps
+      exactly), each turned by the site's rotation, block state included, and compared with the world.
+     */
+    public static PlacementCheck checkPlacement(ServerLevel level, MinecraftServer server, TownManifest town, TownColumns columns, TownTransform t) {
+        int sampled = 0;
+        int matched = 0;
+        List<String> problems = new ArrayList<>();
+        for (int i = 0; i < town.tiles().size(); i += SAMPLE_TILE_STRIDE) {
+            TownManifest.Tile tile = town.tiles().get(i);
+            List<StructureTemplate.StructureBlockInfo> blocks = TownPlacer.templateBlocks(TownPlacer.loadTile(server, tile.id()));
+            List<StructureTemplate.StructureBlockInfo> stored = new ArrayList<>();
+            for (StructureTemplate.StructureBlockInfo b : blocks) {
+                int tx = tile.offset().getX() + b.pos().getX();
+                int tz = tile.offset().getZ() + b.pos().getZ();
+                if (tx < columns.width() && tz < columns.depth() && columns.stored(tx, tz)) {
+                    stored.add(b);
+                }
+            }
+            if (stored.isEmpty()) {
+                continue;
+            }
+            int step = Math.max(1, stored.size() / SAMPLES_PER_TILE);
+            for (int k = step / 2; k < stored.size(); k += step) {
+                StructureTemplate.StructureBlockInfo b = stored.get(k);
+                BlockPos at = t.toWorld(tile.offset().offset(b.pos()));
+                BlockState want = b.state().rotate(t.rotation());
+                BlockState got = level.getBlockState(at);
+                sampled++;
+                if (got == want) {
+                    matched++;
+                } else if (problems.size() < 5) {
+                    problems.add(at.toShortString() + " should be " + want + ", is " + got);
+                }
+            }
+        }
+        return new PlacementCheck(sampled > 0 && matched == sampled, sampled, matched, problems);
     }
 
     private static SiteVerification verify(MinecraftServer server, ServerLevel level, WorldPlan plan) {

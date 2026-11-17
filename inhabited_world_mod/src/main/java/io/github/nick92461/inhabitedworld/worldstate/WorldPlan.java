@@ -1,5 +1,6 @@
 package io.github.nick92461.inhabitedworld.worldstate;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -50,11 +51,16 @@ import org.jspecify.annotations.Nullable;
     strip, no sea needed in it): its sites, regions and verification stay as they were, and only the version number
     it is saved with changes. A version 4 plan is refused by an older mod, which would misread a rotated site.
 
-  Later phases add structure placement and geography facts, each with a new data version.
+  - 5 (Phase 3, structure placement): adds the placed structures, each with its semantic locations (02 section 16)
+    and the read-back check of its blocks. A plan of version 4 or older was made before builds were placed: it reads
+    with no placed structures, and none is ever placed into it (only a world's own creation places builds, see
+    PlacementState). Its sites, regions and verification stay as they were.
+
+  Later phases add geography facts, with a new data version.
  */
 public record WorldPlan(int dataVersion, UUID worldId, PlayableArea playableArea, Optional<PlannerRun> planner, List<PlannedSite> sites,
-                        List<SemanticRegion> regions, Optional<SiteVerification> verification) {
-    public static final int DATA_VERSION = 4;
+                        List<SemanticRegion> regions, Optional<SiteVerification> verification, List<PlacedStructure> structures) {
+    public static final int DATA_VERSION = 5;
 
     /** The step-4 plan: no planner, no sites. */
     public static final int DATA_VERSION_WITHOUT_SITES = 1;
@@ -62,6 +68,8 @@ public record WorldPlan(int dataVersion, UUID worldId, PlayableArea playableArea
     public static final int DATA_VERSION_WITHOUT_REGIONS = 2;
     /** The P2B plan: sites and regions, planned by planner version 1 (no rotation, no per-site waterfront rules). */
     public static final int DATA_VERSION_UNROTATED = 3;
+    /** The planner version 2 plan: rotated sites, but no placed structures. */
+    public static final int DATA_VERSION_UNPLACED = 4;
 
     /** The plan as it is stored, any supported version, before migration. */
     public static final Codec<WorldPlan> STORED_CODEC = RecordCodecBuilder.create(i -> i.group(
@@ -71,7 +79,8 @@ public record WorldPlan(int dataVersion, UUID worldId, PlayableArea playableArea
                     PlannerRun.CODEC.optionalFieldOf("planner").forGetter(WorldPlan::planner),
                     PlannedSite.CODEC.listOf().optionalFieldOf("sites", List.of()).forGetter(WorldPlan::sites),
                     SemanticRegion.CODEC.listOf().optionalFieldOf("regions", List.of()).forGetter(WorldPlan::regions),
-                    SiteVerification.CODEC.optionalFieldOf("verification").forGetter(WorldPlan::verification))
+                    SiteVerification.CODEC.optionalFieldOf("verification").forGetter(WorldPlan::verification),
+                    PlacedStructure.CODEC.listOf().optionalFieldOf("structures", List.of()).forGetter(WorldPlan::structures))
             .apply(i, WorldPlan::new));
 
     /** Reads any supported version as the current one, and writes only the current one. */
@@ -80,6 +89,13 @@ public record WorldPlan(int dataVersion, UUID worldId, PlayableArea playableArea
     public WorldPlan {
         sites = List.copyOf(sites);
         regions = List.copyOf(regions);
+        structures = List.copyOf(structures);
+    }
+
+    /** A plan without placed structures (every plan before its builds are placed). */
+    public WorldPlan(int dataVersion, UUID worldId, PlayableArea playableArea, Optional<PlannerRun> planner, List<PlannedSite> sites,
+                     List<SemanticRegion> regions, Optional<SiteVerification> verification) {
+        this(dataVersion, worldId, playableArea, planner, sites, regions, verification, List.of());
     }
 
     /*
@@ -87,6 +103,9 @@ public record WorldPlan(int dataVersion, UUID worldId, PlayableArea playableArea
       version is never read as if it were this version's.
      */
     public static DataResult<WorldPlan> upgrade(WorldPlan plan) {
+        if (plan.dataVersion() < DATA_VERSION && !plan.structures().isEmpty()) {
+            return DataResult.error(() -> "a version " + plan.dataVersion() + " WorldPlan has no placed structures");
+        }
         if (plan.dataVersion() == DATA_VERSION_WITHOUT_SITES) {
             if (plan.planner().isPresent() || !plan.sites().isEmpty() || !plan.regions().isEmpty() || plan.verification().isPresent()) {
                 return DataResult.error(() -> "a version 1 WorldPlan has no planner, sites, regions or verification");
@@ -101,8 +120,9 @@ public record WorldPlan(int dataVersion, UUID worldId, PlayableArea playableArea
                     SiteRegions.derive(plan.sites()), plan.verification());
             return check(migrated);
         }
-        if (plan.dataVersion() == DATA_VERSION_UNROTATED) {
-            // Absent fields have already read as planner version 1's values; only the version number moves on.
+        if (plan.dataVersion() == DATA_VERSION_UNROTATED || plan.dataVersion() == DATA_VERSION_UNPLACED) {
+            // Absent fields have already read as planner version 1's values (version 3) and as no placed structures
+            // (versions 3 and 4); only the version number moves on.
             return check(new WorldPlan(DATA_VERSION, plan.worldId(), plan.playableArea(), plan.planner(), plan.sites(), plan.regions(), plan.verification()));
         }
         if (plan.dataVersion() != DATA_VERSION) {
@@ -139,6 +159,33 @@ public record WorldPlan(int dataVersion, UUID worldId, PlayableArea playableArea
         if (!covered.equals(siteIds)) {
             return DataResult.error(() -> "every planned site has a semantic region (sites " + siteIds + ", regions cover " + covered + ")");
         }
+        Set<String> placedSites = new HashSet<>();
+        Set<String> locationIds = new HashSet<>();
+        for (PlacedStructure structure : plan.structures()) {
+            PlannedSite site = plan.site(structure.site());
+            if (site == null) {
+                return DataResult.error(() -> "placed structure " + structure.build() + " names a site the plan doesn't have: " + structure.site());
+            }
+            if (!placedSites.add(structure.site())) {
+                return DataResult.error(() -> "two structures are placed at site " + structure.site());
+            }
+            if (!structure.catalogId().equals(site.catalogId())) {
+                return DataResult.error(() -> "site " + site.id() + " plans " + site.catalogId() + ", but " + structure.catalogId() + " was placed there");
+            }
+            if (structure.rotation() != site.rotation()) {
+                return DataResult.error(() -> "site " + site.id() + " is turned " + site.rotation().getSerializedName() + ", its structure "
+                        + structure.rotation().getSerializedName());
+            }
+            for (SemanticLocation location : structure.locations()) {
+                if (!locationIds.add(location.id())) {
+                    return DataResult.error(() -> "two semantic locations are called " + location.id());
+                }
+                if (!location.site().equals(structure.site())) {
+                    return DataResult.error(() -> "location " + location.id() + " belongs to site " + location.site() + ", not to its structure's "
+                            + structure.site());
+                }
+            }
+        }
         return DataResult.success(plan);
     }
 
@@ -158,7 +205,21 @@ public record WorldPlan(int dataVersion, UUID worldId, PlayableArea playableArea
     }
 
     public WorldPlan withVerification(SiteVerification verification) {
-        return new WorldPlan(this.dataVersion, this.worldId, this.playableArea, this.planner, this.sites, this.regions, Optional.of(verification));
+        return new WorldPlan(this.dataVersion, this.worldId, this.playableArea, this.planner, this.sites, this.regions, Optional.of(verification),
+                this.structures);
+    }
+
+    /** This plan with one more placed structure, checked like a saved plan. */
+    public WorldPlan withStructure(PlacedStructure structure) {
+        List<PlacedStructure> all = new ArrayList<>(this.structures);
+        all.add(structure);
+        return check(new WorldPlan(this.dataVersion, this.worldId, this.playableArea, this.planner, this.sites, this.regions, this.verification, all))
+                .getOrThrow(IllegalArgumentException::new);
+    }
+
+    /** The structure placed at a site, if any. */
+    public Optional<PlacedStructure> structure(String site) {
+        return this.structures.stream().filter(s -> s.site().equals(site)).findFirst();
     }
 
     /** Whether this world's sites were planned (false for a world made before the planner existed). */

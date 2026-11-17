@@ -4,6 +4,7 @@ import java.util.UUID;
 
 import io.github.nick92461.inhabitedworld.InhabitedWorld;
 import io.github.nick92461.inhabitedworld.region.Regions;
+import io.github.nick92461.inhabitedworld.town.TownPlacement;
 import io.github.nick92461.inhabitedworld.worldgen.PlayableArea;
 import io.github.nick92461.inhabitedworld.worldgen.RpgWorlds;
 import io.github.nick92461.inhabitedworld.worldgen.planner.NoisePlanning;
@@ -73,6 +74,17 @@ public final class WorldPlans {
         }
         // The semantic regions apply from the first chunk on (vanilla's spawn search generates chunks next).
         Regions.install(server);
+        // Which builds this world places once pre-generation is done (Phase 3): decided now, never again.
+        TownPlacement.schedule(server, overworld, plan);
+    }
+
+    /** Records a structure placed while the world was created (TownPlacement), in the saved plan. */
+    public static void recordPlacement(MinecraftServer server, PlacedStructure structure) {
+        WorldPlanData data = data(server);
+        if (data == null) {
+            throw new IllegalStateException("no WorldPlan to record a placed structure in");
+        }
+        data.recordPlacement(structure);
     }
 
     /*
