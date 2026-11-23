@@ -380,6 +380,52 @@ The user has downloaded worlds containing builds (a city) to use as the handcraf
     - a guaranteed encounter (a placeholder "foreman") in its own persisted store: NOT_SPAWNED / ACTIVE / DEFEATED
     - the mob-cap check; `/inhabited encounter`
   - Part 3, after part 1 is merged: the handcrafted mine build placed at the POI site with the part 1 placer, hotspot and encounter anchors moved onto its markers, and geography facts (`02` §8).
+    - **The mine build is the user's pick (2026-11-23: "ill find a mineshaft build file i like").** Don't script or choose one. Part 3 waits for it, then imports it through `tools/buildimport` like the Harbour.
+  - **Part 1 BUILT and merged 2026-11-23 (a50fb26 + 509404c, merge c2f5f87).** Report: `docs/notes/2026-11-17_p3_town_placement/REPORT.md`.
+    - Mechanism: a controlled paste after pre-generation and site verification, before the world opens (`TownPlacement`, called from `MinecraftServerMixin`).
+      - The list of what to place is fixed in `PlacementState` when the plan is made, so older worlds are never touched.
+      - It runs in steps (TILES → BLEND → DONE), loads one tile at a time, and saves progress at checkpoints.
+    - `TownTransform`: rotation for blocks, states, block entities and markers. `TownBlend`: a smooth height field across the blend columns and border, which also replaces ores and infested stone under the town.
+    - Entities: generated animals in the town area are removed, and forbidden template entities are always dropped.
+    - WorldPlan data v5 adds `structures`: `PlacedStructure` with `SemanticLocation`s and a `PlacementCheck`. The read API is `SemanticLocations`. Dev commands: `/inhabited locations [tp <id>]`.
+    - Seed 20261029:
+      - placement adds 15.8–17.3 s to creation, on top of 164 s of pre-generation
+      - 1,633,687 blocks; 40,376 blend columns, steepest step 15
+      - read-back check 264/264; full comparison 0 mismatches
+      - re-running the blend changes 0 columns
+    - Tests: 107 unit, 50 game. New `-PgameTestSeed=<seed>`.
+    - Known issues:
+      - a 1-block water step at the sea edge (town sea y 63, ocean y 62)
+      - deep-foundation walls showing at some cut edges
+      - no trees in the rebuilt border
+      - the loading bar sits at 100% for ~16 s
+      - no town outline in `/inhabited plan edges`
+      - `pre_generation_covers_the_map_and_ocean_ring` fails on seed 20261029 (one ocean-ring corner chunk isn't sea; the default seed passes)
+    - Recommendations to act on, each in a fresh session: template y 0 → world y 1 (flush water); the blend reads each edge column's lowest open block; replant trees in the border after an in-game look.
+  - **Part 2 BUILT and merged 2026-11-23 (9ad1406, merge 79f3584).** Report: `docs/notes/2026-11-17_p3_poi_threats/REPORT.md`.
+    - `threat/`: a data-driven `ThreatProfile` (`threat_profile/placeholder_abandoned_mine.json`), bound by catalog ID through `poi_threats/<catalog>.json`, with no WorldPlan change.
+      - zombies, skeletons and cave spiders only, which also spawn at block light up to 7, with a cap of 12
+      - a new `NaturalSpawnerMixin` picks monsters from the profile
+    - `Hotspot`: a target of 4 and at most 6 alive, run only while a player is within 40 blocks, with its own spawn-spot search.
+    - Anchors are site-relative behind `SiteAnchor`, ready for markers.
+    - `encounter/`: `encounters.dat` (data v1, per world ID) holds NOT_SPAWNED / ACTIVE / DEFEATED.
+      - the mob spawns lazily, is persistence-required and tagged, and is reconciled on reload with stray copies removed
+      - any death defeats it
+      - query API `Encounters.state/record/entity/ids`
+      - the placeholder is `inhabited_world:placeholder_mine_foreman`
+    - Mob caps: persistence-required mobs don't count in 26.3 (this closes the open item); hotspot mobs do, at most 6.
+    - Decision cost 8.4 ns across the map, 9.6–16.4 ns inside the mine, with no allocation.
+    - Chambers of 300 attempts each:
+      - POI: 938 dark and 951 lit, only the mine's three types
+      - wilderness: 983 dark, 0 lit
+      - town: 0
+    - Tests: 108 unit, 47 game.
+    - Decided as recommended:
+      - any death defeats the foreman (the cause is recorded)
+      - the foreman never respawns in v0.1
+      - block light up to 7 in the mine
+      - phantoms refused above the POI
+    - Build-brief fix: a shared daemon registry let one session's `gradlew --stop` kill another's build, so future briefs give each session its own `GRADLE_USER_HOME`-style daemon registry.
 
 **Open (needs the user):**
 - each build's size in blocks
