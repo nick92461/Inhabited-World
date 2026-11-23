@@ -145,11 +145,22 @@ public class RegionGameTests {
         throw helper.assertionException("no inland side of the town has usable wilderness for the arena");
     }
 
+    // Above everything in its footprint (walls included), so it never cuts into what stands there: since Phase 3 the
+    // town chamber hangs over the placed Harbour's roofs.
     private static Chamber chamber(ServerLevel level, String name, BlockPos column) {
         ChunkPos chunk = ChunkPos.containing(column);
-        level.getChunk(chunk.x(), chunk.z());
-        int surface = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, chunk.getMiddleBlockX(), chunk.getMiddleBlockZ());
-        return new Chamber(name, chunk, Math.max(surface, level.getSeaLevel()) + 3);
+        for (int cz = chunk.z() - 1; cz <= chunk.z() + 1; cz++) {
+            for (int cx = chunk.x() - 1; cx <= chunk.x() + 1; cx++) {
+                level.getChunk(cx, cz);
+            }
+        }
+        int surface = level.getSeaLevel();
+        for (int x = chunk.getMinBlockX() - 1; x <= chunk.getMaxBlockX() + 1; x++) {
+            for (int z = chunk.getMinBlockZ() - 1; z <= chunk.getMaxBlockZ() + 1; z++) {
+                surface = Math.max(surface, level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z));
+            }
+        }
+        return new Chamber(name, chunk, surface + 2);
     }
 
     private static SemanticRegion regionAt(ServerLevel level, Chamber chamber) {

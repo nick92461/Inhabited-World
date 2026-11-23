@@ -10,9 +10,11 @@
 		"FeaturePlacerMixin",
 		"MinecraftServerMixin",
 		"PhantomSpawnerMixin",
+		"ServerLevelEntitiesAccessor",
 		"ServerLevelMixin",
 		"ServerLevelRegionsMixin",
 		"SpawnPlacementsMixin",
+		"StructureTemplateAccessor",
 		"WorldDimensionsMixin"
 	],
 	"injectors": {

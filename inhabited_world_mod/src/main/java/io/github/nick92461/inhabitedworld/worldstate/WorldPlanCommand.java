@@ -3,6 +3,7 @@ package io.github.nick92461.inhabitedworld.worldstate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
 
 import com.mojang.brigadier.CommandDispatcher;
@@ -15,6 +16,8 @@ import io.github.nick92461.inhabitedworld.region.RegionEdges;
 import io.github.nick92461.inhabitedworld.region.RegionIndex;
 import io.github.nick92461.inhabitedworld.region.Regions;
 import io.github.nick92461.inhabitedworld.region.SemanticRegion;
+import io.github.nick92461.inhabitedworld.town.PlacementState;
+import io.github.nick92461.inhabitedworld.town.TownPlacement;
 import io.github.nick92461.inhabitedworld.worldgen.planner.PlannedSite;
 
 import net.minecraft.commands.CommandSourceStack;
@@ -36,6 +39,8 @@ import net.minecraft.world.phys.Vec3;
     /inhabited plan tp <site>       teleports you to the middle of a site, on its surface
     /inhabited plan region          the semantic region at your position (3D), its spawn profile and source site
     /inhabited plan edges           toggles particles along the edges of nearby regions
+    /inhabited locations            every semantic location of the placed structures (02 section 16)
+    /inhabited locations tp <id>    teleports you to a semantic location, facing its way
 
   Registered only in development runs (10 section 60: test conveniences never reach the shipped game).
  */
@@ -44,6 +49,8 @@ public final class WorldPlanCommand {
             new SimpleCommandExceptionType(Component.literal("This world has no WorldPlan (it is not an Inhabited World, or was made before WorldPlans existed)"));
     private static final DynamicCommandExceptionType UNKNOWN_SITE =
             new DynamicCommandExceptionType(id -> Component.literal("The WorldPlan has no site called " + id));
+    private static final DynamicCommandExceptionType UNKNOWN_LOCATION =
+            new DynamicCommandExceptionType(id -> Component.literal("This world has no semantic location called " + id));
 
     private WorldPlanCommand() {
     }
@@ -63,7 +70,54 @@ public final class WorldPlanCommand {
                         .then(Commands.literal("region")
                                 .executes(c -> regionHere(c.getSource())))
                         .then(Commands.literal("edges")
-                                .executes(c -> toggleEdges(c.getSource())))));
+                                .executes(c -> toggleEdges(c.getSource()))))
+                .then(Commands.literal("locations")
+                        .executes(c -> listLocations(c.getSource()))
+                        .then(Commands.literal("tp")
+                                .then(Commands.argument("id", StringArgumentType.word())
+                                        .suggests((c, builder) -> SharedSuggestionProvider.suggest(
+                                                SemanticLocations.of(c.getSource().getServer()).all().stream().map(SemanticLocation::id).toList(), builder))
+                                        .executes(c -> teleportToLocation(c.getSource(), StringArgumentType.getString(c, "id")))))));
+    }
+
+    private static int listLocations(CommandSourceStack source) throws CommandSyntaxException {
+        WorldPlan plan = plan(source);
+        SemanticLocations locations = SemanticLocations.of(plan);
+        List<String> lines = new ArrayList<>();
+        if (plan.structures().isEmpty()) {
+            lines.add("No structures are placed in this world, so it has no semantic locations"
+                    + (plan.hasSites() ? " (see /inhabited plan for the placement state)." : "."));
+            send(source, lines);
+            return 0;
+        }
+        lines.add(locations.size() + " semantic locations in " + plan.structures().size() + " placed structure(s):");
+        for (PlacedStructure structure : plan.structures()) {
+            lines.add("  " + structure.build() + " at site " + structure.site() + ", turned " + structure.rotation().getSerializedName() + ":");
+            for (SemanticLocation l : locations.ofSite(structure.site())) {
+                lines.add(String.format(Locale.ROOT, "    %s at %s, facing %s (yaw %.0f), region %s", l.id(), l.pos().toShortString(),
+                        facing(l.yaw()), l.yaw(), l.region()));
+            }
+        }
+        lines.add("Teleport with /inhabited locations tp <id>.");
+        send(source, lines);
+        return locations.size();
+    }
+
+    private static int teleportToLocation(CommandSourceStack source, String id) throws CommandSyntaxException {
+        SemanticLocation location = SemanticLocations.of(plan(source)).get(id).orElseThrow(() -> UNKNOWN_LOCATION.create(id));
+        Entity entity = source.getEntityOrException();
+        ServerLevel level = source.getServer().overworld();
+        BlockPos p = location.pos();
+        entity.teleportTo(level, p.getX() + 0.5, p.getY(), p.getZ() + 0.5, Set.of(), location.yaw(), 0f, true);
+        source.sendSuccess(() -> Component.literal("Teleported to " + id + " at " + p.toShortString() + ", facing " + facing(location.yaw())
+                + " (region " + location.region() + ")"), false);
+        return 1;
+    }
+
+    /** The compass direction a yaw faces (Minecraft convention: 0 south, 90 west, 180 north, 270 east). */
+    static String facing(float yaw) {
+        String[] names = {"south", "south-west", "west", "north-west", "north", "north-east", "east", "south-east"};
+        return names[(int) Math.floorMod(Math.round(yaw / 45.0), 8L)];
     }
 
     // The semantic region that applies where you stand, every region containing that block, and the profile in force.
@@ -137,6 +191,7 @@ public final class WorldPlanCommand {
             lines.add("  predicted: " + site.predicted().describe());
             plan.verification().flatMap(v -> v.sites().stream().filter(c -> c.id().equals(site.id())).findFirst()).ifPresent(check ->
                     lines.add("  generated: " + check.generated().describe() + (check.passed() ? " - OK" : " - FAILED: " + String.join("; ", check.problems()))));
+            lines.add("  build: " + placement(source, plan, site));
         }
         for (int a = 0; a < plan.sites().size(); a++) {
             for (int b = a + 1; b < plan.sites().size(); b++) {
@@ -165,6 +220,23 @@ public final class WorldPlanCommand {
         }
         send(source, lines);
         return plan.sites().size();
+    }
+
+    // Whether the site's build was placed: from the plan once it is, otherwise from the world's placement progress.
+    private static String placement(CommandSourceStack source, WorldPlan plan, PlannedSite site) {
+        Optional<PlacedStructure> placed = plan.structure(site.id());
+        if (placed.isPresent()) {
+            PlacedStructure s = placed.get();
+            return s.build() + " placed, turned " + s.rotation().getSerializedName() + ", template origin at " + s.origin().toShortString() + ", "
+                    + s.locations().size() + " semantic locations (/inhabited locations); check " + s.check().describe();
+        }
+        PlacementState state = TownPlacement.state(source.getServer().overworld());
+        if (state == null) {
+            return "none placed (this world was created before builds were placed, and never gets one)";
+        }
+        return state.entries().stream().filter(e -> e.site().equals(site.id())).findFirst()
+                .map(e -> e.build() + " not placed yet: " + e)
+                .orElse("nothing to place here yet (" + site.catalogId() + " has no build in this mod version)");
     }
 
     private static int teleport(CommandSourceStack source, String id) throws CommandSyntaxException {

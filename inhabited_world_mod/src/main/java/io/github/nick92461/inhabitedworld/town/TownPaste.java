@@ -26,8 +26,8 @@ import net.minecraft.world.level.levelgen.structure.templatesystem.StructureTemp
 
 /*
   Pastes an exported town into a level, unrotated, with template origin at `origin`. Development use: the workshop
-  world, the /inhabited town command and the round-trip game test. Phase 3 placement in generated worlds is a
-  separate job built on the same files.
+  world, the /inhabited town command and the round-trip game test. Placement in generated worlds (rotated, blended,
+  once per world) is TownPlacement, built on the same files and the same contract.
 
   The placement contract of the exported columns (columns.nbt):
     - above a stored column's top: air (whatever stood there is cleared)

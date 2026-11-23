@@ -9,7 +9,7 @@ import net.minecraft.world.level.saveddata.SavedDataType;
 /*
   Saves the WorldPlan in the world's own data folder (data/inhabited_world/world_plan.dat), one file per domain
   (08 section 49). The plan is written when the world is created; the only later writes are verification after
-  pre-generation (once) and a migration from an older data version (once, at the next save after it is read).
+  pre-generation (once), each structure placed while the world is created (once per site), and a migration from an older data version (once, at the next save after it is read).
  */
 public final class WorldPlanData extends SavedData {
     /*
@@ -55,6 +55,12 @@ public final class WorldPlanData extends SavedData {
             throw new IllegalStateException("this WorldPlan was already verified");
         }
         this.plan = this.plan.withVerification(verification);
+        this.setDirty();
+    }
+
+    /** Records a structure placed while the world was created. Each site gets at most one, once. */
+    public void recordPlacement(PlacedStructure structure) {
+        this.plan = this.plan.withStructure(structure);
         this.setDirty();
     }
 }
