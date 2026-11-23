@@ -1,0 +1,26 @@
+{
+  "_comment": "PLACEHOLDER threat profile for the v0.1 external POI, an abandoned mine (canon 09 section 3, 06 section 17.3). Only zombies, skeletons and cave spiders appear on their own in its region, also where a lamp lights a tunnel (block light up to 7), up to 12 at once; one hotspot keeps a few near the site's centre. Numbers are first guesses for Phase 3 part 3 (the mine build) to tune.",
+  "ambient_hostiles": "listed",
+  "hostiles": [
+    {"type": "minecraft:zombie", "weight": 50, "min_group": 1, "max_group": 2},
+    {"type": "minecraft:skeleton", "weight": 30, "min_group": 1, "max_group": 2},
+    {"type": "minecraft:cave_spider", "weight": 20, "min_group": 1, "max_group": 2}
+  ],
+  "local_cap": 12,
+  "conditions": {"max_block_light": 7, "max_brightness": 7},
+  "hotspots": [
+    {
+      "id": "workings",
+      "anchor": {"offset": [0, 0, 0], "vertical": "surface"},
+      "radius": 16,
+      "below": 24,
+      "above": 6,
+      "target": 4,
+      "cap": 6,
+      "interval_ticks": 40,
+      "spawns_per_run": 1,
+      "activation_radius": 40,
+      "min_player_distance": 8
+    }
+  ]
+}

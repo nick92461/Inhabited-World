@@ -14,6 +14,8 @@ import java.util.Random;
 import org.junit.jupiter.api.Test;
 
 import io.github.nick92461.inhabitedworld.spawn.SpawnProfile;
+import io.github.nick92461.inhabitedworld.threat.RegionThreat;
+import io.github.nick92461.inhabitedworld.threat.ThreatProfile;
 import io.github.nick92461.inhabitedworld.worldgen.PlayableArea;
 
 /*
@@ -183,6 +185,22 @@ class RegionIndexTest {
             regions.add(poi("mine_" + s, new RegionVolume(mx, -64, mz, mx + 95, 40 + random.nextInt(80), mz + 95)));
         }
         return regions;
+    }
+
+    // Threat binding (LevelThreats): engine profiles by default; withThreats swaps the POI's profile, lookups unchanged.
+    @Test
+    void threatBindingFollowsTheRegionLookup() {
+        assertSame(TOWN, this.index.threatAt(272, 70, -160).region());
+        assertEquals(ThreatProfile.PROTECTED_SETTLEMENT, this.index.threatAt(272, 70, -160).profile());
+        assertEquals(ThreatProfile.UNBOUND_POI, this.index.threatAt(-240, 64, -240).profile(), "an unbound POI is vanilla-like");
+        assertEquals(ThreatProfile.WILDERNESS, this.index.threatAt(0, 64, 400).profile());
+        ThreatProfile own = new ThreatProfile(io.github.nick92461.inhabitedworld.InhabitedWorld.id("test"), ThreatProfile.PROTECTED_SETTLEMENT.definition());
+        RegionIndex bound = this.index.withThreats(r -> r == MINE ? new RegionThreat(r, own, Optional.empty()) : RegionThreat.builtIn(r));
+        assertSame(own, bound.threatAt(-240, -60, -240).profile());
+        assertSame(MINE, bound.regionAt(-240, -60, -240));
+        assertEquals(ThreatProfile.PROTECTED_SETTLEMENT, bound.threatAt(272, 70, -160).profile());
+        assertTrue(bound.threatAt(-240, 101, -240).region().isWilderness(), "above the POI is wilderness");
+        assertThrows(IllegalArgumentException.class, () -> this.index.withThreats(r -> RegionThreat.builtIn(TOWN)), "a binding keeps its region");
     }
 
     // The reference: every region containing the block, most specific kind first, then the smaller volume, then the ID.

@@ -10,6 +10,7 @@ import com.mojang.brigadier.exceptions.DynamicCommandExceptionType;
 
 import io.github.nick92461.inhabitedworld.region.Regions;
 import io.github.nick92461.inhabitedworld.region.SemanticRegion;
+import io.github.nick92461.inhabitedworld.threat.RegionThreat;
 import io.github.nick92461.inhabitedworld.worldgen.RpgWorlds;
 
 import net.minecraft.commands.CommandBuildContext;
@@ -35,6 +36,8 @@ import net.minecraft.world.entity.SpawnPlacements;
   For minecraft:creaking it also reports the creaking-heart rule (generated hearts stay dormant, placed ones work).
 
   Registered only in development runs (10 section 60: test conveniences never reach the shipped game).
+  It reports the semantic region and the threat profile that applies at that position (a POI's own profile, chosen by
+  its catalog entry, with its local cap and the current count against it).
   It reports the semantic region at that position (canon 10 section 60: current region, active policy, why a spawn
   is allowed or refused, spawn reason, entity type, and which settlement or POI supplied the rule).
  */
@@ -77,11 +80,13 @@ public final class SpawnPolicyCommand {
         // The complete check a natural spawn would make here: vanilla's placement rules, then ours.
         boolean fullCheck = SpawnPlacements.checkSpawnRules(type, level, reason, pos, level.getRandom());
         SemanticRegion region = Regions.at(level, pos.getX(), pos.getY(), pos.getZ());
+        RegionThreat threat = SpawnGovernance.threatAt(level, pos.getX(), pos.getY(), pos.getZ());
 
         String text = "Spawn policy at " + pos.toShortString() + " in " + level.dimension().identifier()
                 + " (Inhabited World: " + yesNo(rpg) + ")\n"
                 + "  semantic region: " + (region == null ? "wilderness (this level has no planned regions)" : region.describe()) + "\n"
                 + "  rule supplied by: " + (region == null || region.site().isEmpty() ? "the wilderness" : "site " + region.site().get()) + "\n"
+                + "  threat profile: " + threat.describe() + "\n"
                 + EntityType.getKey(type) + ", reason " + reason.name().toLowerCase(Locale.ROOT)
                 + " (origin " + SpawnPolicy.origin(reason).name().toLowerCase(Locale.ROOT) + "): "
                 + (decision.allowed() ? "ALLOWED" : "REFUSED") + " - " + decision.explanation() + "\n"

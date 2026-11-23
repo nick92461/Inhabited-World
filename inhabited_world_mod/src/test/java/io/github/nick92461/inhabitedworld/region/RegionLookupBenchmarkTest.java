@@ -15,9 +15,13 @@ import java.util.Random;
 import org.junit.jupiter.api.Test;
 
 import io.github.nick92461.inhabitedworld.spawn.SpawnPolicy;
-import io.github.nick92461.inhabitedworld.spawn.SpawnProfile;
+import io.github.nick92461.inhabitedworld.threat.RegionThreat;
+import io.github.nick92461.inhabitedworld.threat.ThreatProfile;
+import io.github.nick92461.inhabitedworld.threat.ThreatProfileTest;
 
 import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EntityTypes;
 
 /*
   The cost of one region lookup and one spawn decision (canon 06 section 17.6: governance must be fast, with minimal
@@ -51,12 +55,17 @@ class RegionLookupBenchmarkTest {
     @Test
     void lookupAndDecisionCostPerCall() throws IOException {
         Random random = new Random(20261112L);
-        RegionIndex v01 = RegionIndex.of(RegionIndexTest.WILDERNESS, List.of(RegionIndexTest.TOWN, RegionIndexTest.MINE));
+        // The POI bound to the shipped abandoned-mine profile, as LevelThreats binds it in a running world.
+        ThreatProfile mineProfile = ThreatProfileTest.shippedMine();
+        RegionIndex v01 = RegionIndex.of(RegionIndexTest.WILDERNESS, List.of(RegionIndexTest.TOWN, RegionIndexTest.MINE))
+                .withThreats(r -> r == RegionIndexTest.MINE ? new RegionThreat(r, mineProfile, java.util.Optional.empty()) : RegionThreat.builtIn(r));
         RegionIndex large = RegionIndex.of(RegionIndexTest.WILDERNESS, RegionIndexTest.manyRegions(random, 300, 10240));
 
         RegionVolume town = RegionIndexTest.TOWN.volume();
         Positions wilderness = Positions.random(random, -512, 0, -64, 319, 0, 511);
         Positions inTown = Positions.random(random, town.minX(), town.maxX(), 40, 120, town.minZ(), town.maxZ());
+        RegionVolume mine = RegionIndexTest.MINE.volume();
+        Positions inMine = Positions.random(random, mine.minX(), mine.maxX(), mine.minY(), mine.maxY(), mine.minZ(), mine.maxZ());
         Positions map = Positions.random(random, -512, 511, -64, 319, -512, 511);
         Positions largeMap = Positions.random(random, -5120, 5119, -64, 319, -5120, 5119);
 
@@ -71,9 +80,16 @@ class RegionLookupBenchmarkTest {
                 () -> lookups(large, largeMap)));
         worst = Math.max(worst, measure(report, "v0.1 full decision (lookup + policy), anywhere on the map", () -> decisions(v01, map)));
         worst = Math.max(worst, measure(report, "v0.1 full decision, inside the town (refused)", () -> decisions(v01, inTown)));
+        worst = Math.max(worst, measure(report, "v0.1 full decision, inside the mine POI (listed zombie, allowed by profile)",
+                () -> decisions(v01, inMine, EntityTypes.ZOMBIE)));
+        worst = Math.max(worst, measure(report, "v0.1 full decision, inside the mine POI (unlisted creeper, refused)",
+                () -> decisions(v01, inMine, EntityTypes.CREEPER)));
 
         long allocated = allocatedBy(() -> decisions(v01, map));
         report.add(String.format(Locale.ROOT, "bytes allocated by %d full decisions: %d", CALLS, allocated));
+        long allocatedMine = allocatedBy(() -> decisions(v01, inMine, EntityTypes.CAVE_SPIDER));
+        report.add(String.format(Locale.ROOT, "bytes allocated by %d full decisions inside the mine POI: %d", CALLS, allocatedMine));
+        allocated = Math.max(allocated, allocatedMine);
 
         Path file = Path.of("build", "reports", "region-lookup-benchmark.txt");
         Files.createDirectories(file.getParent());
@@ -99,12 +115,17 @@ class RegionLookupBenchmarkTest {
     }
 
     private static long decisions(RegionIndex index, Positions p) {
+        return decisions(index, p, EntityTypes.ZOMBIE);
+    }
+
+    // What SpawnGovernance.decide does after the level lookups: threat binding at the position, then the policy.
+    private static long decisions(RegionIndex index, Positions p, EntityType<?> type) {
         long refused = 0;
         int mask = POSITIONS - 1;
         for (int k = 0; k < CALLS; k++) {
             int i = k & mask;
-            SpawnProfile profile = index.regionAt(p.x()[i], p.y()[i], p.z()[i]).profile();
-            if (!SpawnPolicy.decide(true, false, true, EntitySpawnReason.NATURAL, profile).allowed()) {
+            RegionThreat threat = index.threatAt(p.x()[i], p.y()[i], p.z()[i]);
+            if (!SpawnPolicy.decide(true, false, true, type, EntitySpawnReason.NATURAL, threat.profile(), threat.population()).allowed()) {
                 refused++;
             }
         }

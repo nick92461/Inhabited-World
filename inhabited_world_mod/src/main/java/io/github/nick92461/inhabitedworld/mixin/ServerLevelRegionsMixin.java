@@ -6,6 +6,8 @@ import com.llamalad7.mixinextras.sugar.Local;
 import io.github.nick92461.inhabitedworld.region.RegionIndex;
 import io.github.nick92461.inhabitedworld.region.RegionIndexHolder;
 import io.github.nick92461.inhabitedworld.spawn.SpawnGovernance;
+import io.github.nick92461.inhabitedworld.threat.LevelThreats;
+import io.github.nick92461.inhabitedworld.threat.LevelThreatsHolder;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
@@ -19,7 +21,8 @@ import org.spongepowered.asm.mixin.injection.At;
   Semantic regions on the level (canon 06 sections 17.1 and 17.6):
 
   1. Each ServerLevel carries its region index (RegionIndexHolder). Volatile, because chunk-generation threads read it
-     while spawning a new chunk's animals; it is set before the first chunk generates and never mutated after.
+     while spawning a new chunk's animals; it is set before the first chunk generates and never mutated after (a
+     data-pack reload replaces it whole). Beside it, its threat state (LevelThreatsHolder: hotspots, encounters).
   2. Skeleton traps. In a thunderstorm vanilla sometimes turns a lightning strike into a skeleton-horse trap
      (ServerLevel.tickThunder, reason EVENT, outside SpawnPlacements.checkSpawnRules) whose four skeleton horsemen
      appear when a player comes close. That is weather making hostiles from nothing, ordinary hostile generation, so
@@ -27,9 +30,23 @@ import org.spongepowered.asm.mixin.injection.At;
      vanilla does when mob spawning is off. The wilderness keeps its traps.
  */
 @Mixin(ServerLevel.class)
-public abstract class ServerLevelRegionsMixin implements RegionIndexHolder {
+public abstract class ServerLevelRegionsMixin implements RegionIndexHolder, LevelThreatsHolder {
     @Unique
     private volatile @Nullable RegionIndex inhabitedWorld$regionIndex;
+
+    // Server thread only (ticking, entity events, commands).
+    @Unique
+    private @Nullable LevelThreats inhabitedWorld$threats;
+
+    @Override
+    public @Nullable LevelThreats inhabitedWorld$threats() {
+        return this.inhabitedWorld$threats;
+    }
+
+    @Override
+    public void inhabitedWorld$setThreats(@Nullable LevelThreats threats) {
+        this.inhabitedWorld$threats = threats;
+    }
 
     @Override
     public @Nullable RegionIndex inhabitedWorld$regionIndex() {
